@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  # API Gateway
+  nginx:
+    image: nginx:latest
+    container_name: api-gateway
+    ports:
+      - "8080:80" # Gateway jalan di port 8080
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - url-service
+      # - order-service
+      # - payment-service
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
+  # URL Service
+  url-service:
+    build:
+      context: ./url-service
+      dockerfile: Dockerfile
+      target: development
+    container_name: url-service
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      # Mount source code untuk hot reload
+      - ./url-service:/app
+      # Prevent overwriting node_modules
+      - /app/node_modules
+      # Cache untuk build faster
+      - url-service-cache:/app/.cache
+    restart: unless-stopped
+    networks:
+      - microservices-network
+    command: npm run start:dev
+
+  # Order Service
+  # order-service:
+  #   build:
+  #     context: ./order-service
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: order-service
+  #   ports:
+  #     - "3002:3000"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=3000
+  #   volumes:
+  #     # Mount source code untuk hot reload
+  #     - ./order-service:/app
+  #     # Prevent overwriting node_modules
+  #     - /app/node_modules
+  #     # Cache untuk build faster
+  #     - order-service-cache:/app/.cache
+  #   restart: unless-stopped
+  #   networks:
+  #     - microservices-network
+  #   command: npm run start:dev
+
+  # Payment Service
+  # payment-service:
+  #   build:
+  #     context: ./payment-service
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: payment-service
+  #   ports:
+  #     - "3003:3000"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=3000
+  #   volumes:
+  #     # Mount source code untuk hot reload
+  #     - ./payment-service:/app
+  #     # Prevent overwriting node_modules
+  #     - /app/node_modules
+  #     # Cache untuk build faster
+  #     - payment-service-cache:/app/.cache
+  #   restart: unless-stopped
+  #   networks:
+  #     - microservices-network
+  #   command: npm run start:dev
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  url-service-cache:
+    driver: local
+  # order-service-cache:
+  #   driver: local
+  # payment-service-cache:
+  #   driver: local
