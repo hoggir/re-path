@@ -12,6 +12,7 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+  const port = configService.get('PORT', 3000);
 
   // Global prefix untuk semua routes
   app.setGlobalPrefix('api');
@@ -45,17 +46,21 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
-      disableErrorMessages: 
-        configService.get('NODE_ENV') === 'production', // Hide error details di production
+      disableErrorMessages: configService.get('NODE_ENV') === 'production', // Hide error details di production
     }),
   );
 
   // Swagger Documentation
+  // Swagger Documentation
   if (configService.get('NODE_ENV') !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Re P4th API Documentation')
-      .setDescription('REST API Documentation')
+      .setTitle('Re:Path API Documentation')
+      .setDescription(
+        'Complete REST API documentation for Re:Path application. This API provides authentication, user management, and other core functionalities.',
+      )
       .setVersion('1.0')
+      .setContact('Re:Path Support', 'https://repath.com', 'support@repath.com')
+      .setLicense('MIT', 'https://opensource.org/licenses/MIT')
       .addBearerAuth(
         {
           type: 'http',
@@ -67,25 +72,47 @@ async function bootstrap() {
         },
         'JWT-auth',
       )
+      .addTag(
+        'Authentication',
+        'Authentication endpoints for login, register, and token management',
+      )
+      .addTag('Users', 'User management endpoints')
+      // .addTag('Health', 'Health check and monitoring endpoints')
+      .addServer(`http://localhost:${port}`, 'Local Development')
+      // .addServer('https://api-staging.repath.com', 'Staging')
+      // .addServer('https://api.repath.com', 'Production')
       .build();
 
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, config, {
+      deepScanRoutes: true,
+    });
+
     SwaggerModule.setup('api/docs', app, document, {
       swaggerOptions: {
         persistAuthorization: true,
+        docExpansion: 'none',
+        filter: true,
+        showRequestDuration: true,
+        syntaxHighlight: {
+          theme: 'monokai',
+        },
       },
+      customSiteTitle: 'Re:Path API Docs',
+      customfavIcon: 'https://repath.com/favicon.ico',
+      customCss: '.swagger-ui .topbar { display: none }',
     });
+
+    console.log(
+      `📚 Swagger documentation available at: http://localhost:${port}/api/docs`,
+    );
   }
 
   // Graceful shutdown
   app.enableShutdownHooks();
 
-  const port = configService.get('PORT', 3000);
-  // const port = 3000;
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
 }
 
 bootstrap().catch((err) => {

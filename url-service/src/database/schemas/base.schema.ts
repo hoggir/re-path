@@ -3,9 +3,6 @@ import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class BaseSchema extends Document {
-   @Prop({ type: Types.ObjectId, auto: true })
-   declare _id: Types.ObjectId;
-
   @Prop({ default: Date.now })
   createdAt: Date;
 

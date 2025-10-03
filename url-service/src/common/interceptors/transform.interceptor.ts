@@ -25,7 +25,7 @@ export class TransformInterceptor<T>
   ): Observable<Response<T>> {
     const ctx = context.switchToHttp();
     const response = ctx.getResponse();
-    
+
     return next.handle().pipe(
       map((data) => ({
         success: true,

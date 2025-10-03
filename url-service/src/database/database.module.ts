@@ -31,7 +31,7 @@ import { DatabaseService } from './database.service';
 
             // Middleware untuk logging (development only)
             if (process.env.NODE_ENV !== 'production') {
-              connection.set('debug', true);
+              // connection.set('debug', true);
             }
 
             return connection;
