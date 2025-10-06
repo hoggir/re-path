@@ -17,6 +17,13 @@ export class UsersRepository extends BaseRepository<User> {
       .exec();
   }
 
+  async findById(id: string): Promise<User | null> {
+    return this.userModel
+      .findOne({ _id: id, isDeleted: false })
+      .select('+userCode +id')
+      .exec();
+  }
+
   async findByEmailWithPassword(email: string): Promise<User | null> {
     return this.userModel
       .findOne({ email: email.toLowerCase(), isDeleted: false })
