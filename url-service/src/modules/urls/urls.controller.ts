@@ -22,7 +22,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UrlService } from './urls.service';
 
 @ApiTags('URL Shortener')
-@Controller('urls')
+@Controller('url')
 @ApiBearerAuth('JWT-auth')
 export class UrlController {
   constructor(private readonly urlService: UrlService) {}

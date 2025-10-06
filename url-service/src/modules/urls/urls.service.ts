@@ -16,7 +16,7 @@ export class UrlService {
 
   constructor(
     private readonly urlRepository: UrlRepository,
-    private readonly configService: ConfigService, 
+    private readonly configService: ConfigService,
   ) {
     this.shortCodeLength = 6;
     this.maxRetries = 5;

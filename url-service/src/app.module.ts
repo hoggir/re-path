@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { UrlsModule } from './modules/urls/urls.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UrlsModule } from './modules/urls/urls.module';
       load: [databaseConfig],
       envFilePath: ['.env.local', '.env'],
     }),
+    HealthModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

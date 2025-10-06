@@ -72,12 +72,13 @@ async function bootstrap() {
         },
         'JWT-auth',
       )
-      .addTag(
-        'Authentication',
-        'Authentication endpoints for login, register, and token management',
-      )
-      .addTag('Users', 'User management endpoints')
+      // .addTag(
+      //   'Authentication',
+      //   'Authentication endpoints for login, register, and token management',
+      // )
+      // .addTag('Users', 'User management endpoints')
       // .addTag('Health', 'Health check and monitoring endpoints')
+      .addServer('http://localhost:8080', 'Nginx Gateway (Development)')
       .addServer(`http://localhost:${port}`, 'Local Development')
       // .addServer('https://api-staging.repath.com', 'Staging')
       // .addServer('https://api.repath.com', 'Production')
