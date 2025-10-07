@@ -51,7 +51,6 @@ async function bootstrap() {
   );
 
   // Swagger Documentation
-  // Swagger Documentation
   if (configService.get('NODE_ENV') !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Re:Path API Documentation')
@@ -72,13 +71,14 @@ async function bootstrap() {
         },
         'JWT-auth',
       )
-      // .addTag(
-      //   'Authentication',
-      //   'Authentication endpoints for login, register, and token management',
-      // )
-      // .addTag('Users', 'User management endpoints')
-      // .addTag('Health', 'Health check and monitoring endpoints')
-      .addServer('http://localhost:8080', 'Nginx Gateway (Development)')
+      .addTag(
+        'Authentication',
+        'Authentication endpoints for login, register, and token management',
+      )
+      .addTag('Users', 'User management endpoints')
+      .addTag('Health', 'Health check and monitoring endpoints')
+      .addTag('URL Shortener', 'Shortened URL management endpoints')
+      .addServer('http://localhost:8080', 'Nginx Gateway')
       .addServer(`http://localhost:${port}`, 'Local Development')
       // .addServer('https://api-staging.repath.com', 'Staging')
       // .addServer('https://api.repath.com', 'Production')
