@@ -3,15 +3,15 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/hoggir/re-path/redirect-service/internal/app/http/response"
-	"github.com/hoggir/re-path/redirect-service/internal/app/service"
+	"github.com/hoggir/re-path/redirect-service/internal/users"
 )
 
 type UserHandler struct {
-	UserService *service.UserService
+	UserService *users.UserService
 }
 
-func NewUserHandler(userService *service.UserService) *UserHandler {
-	return &UserHandler{UserService: userService}
+func NewUserHandler(service *users.UserService) *UserHandler {
+	return &UserHandler{UserService: service}
 }
 
 func (h *UserHandler) GetAllUsers(c *gin.Context) {

@@ -6,10 +6,10 @@
 BINARY_NAME=redirect-service
 
 # Lokasi direktori utama aplikasi
-CMD_DIR=cmd/server
+CMD_DIR=cmd
 
 # Lokasi file wire.go
-WIRE_DIR=cmd/server
+WIRE_DIR=cmd
 
 # ===========================================
 # 🧩 Perintah Development
@@ -29,8 +29,8 @@ wire:
 ## Install Air (hot reload) dan Wire (dependency injection)
 setup:
 	@echo "📦 Installing dev tools (air + wire)..."
-	go install github.com/cosmtrek/air@latest
-	go get github.com/google/wire/cmd/wire@v0.7.0
+	go install github.com/air-verse/air@latest
+	go install github.com/google/wire/cmd/wire@v0.7.0
 	@echo "✅ Setup complete!"
 
 # ===========================================
