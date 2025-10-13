@@ -30,7 +30,7 @@ func NewRedirectHandler(redirectService service.RedirectService) *RedirectHandle
 // @Param shortCode path string true "Short Code"
 // @Success 200 {object} dto.Response
 // @Failure 404 {object} dto.Response
-// @Router /{shortCode} [get]
+// @Router /r/{shortCode} [get]
 func (h *RedirectHandler) Redirect(c *gin.Context) {
 	shortCode := c.Param("shortCode")
 

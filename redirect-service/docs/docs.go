@@ -69,7 +69,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{shortCode}": {
+        "/r/{shortCode}": {
             "get": {
                 "description": "Returns the original URL information without performing a redirect",
                 "consumes": [

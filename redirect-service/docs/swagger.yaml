@@ -25,31 +25,6 @@ info:
   title: Re:Path Redirect Service API
   version: "1.0"
 paths:
-  /{shortCode}:
-    get:
-      consumes:
-      - application/json
-      description: Returns the original URL information without performing a redirect
-      parameters:
-      - description: Short Code
-        in: path
-        name: shortCode
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: Get original URL from short code
-      tags:
-      - Redirect
   /api/info/{shortCode}:
     get:
       parameters:
@@ -80,6 +55,31 @@ paths:
       summary: Health check
       tags:
       - Health
+  /r/{shortCode}:
+    get:
+      consumes:
+      - application/json
+      description: Returns the original URL information without performing a redirect
+      parameters:
+      - description: Short Code
+        in: path
+        name: shortCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Get original URL from short code
+      tags:
+      - Redirect
 schemes:
 - http
 - https

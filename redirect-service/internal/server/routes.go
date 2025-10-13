@@ -18,5 +18,5 @@ func (s *Server) registerRoutes(r *gin.Engine) {
 		api.GET("/info/:shortCode", s.RedirectHandler.GetURLInfo)
 	}
 
-	r.GET("/:shortCode", s.RedirectHandler.Redirect)
+	r.GET("/r/:shortCode", s.RedirectHandler.Redirect)
 }
