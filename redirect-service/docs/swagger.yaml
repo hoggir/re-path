@@ -1,0 +1,86 @@
+basePath: /
+definitions:
+  dto.Response:
+    properties:
+      data: {}
+      error: {}
+      message:
+        type: string
+      success:
+        type: boolean
+      timestamp:
+        type: string
+    type: object
+host: localhost:3011
+info:
+  contact:
+    email: support@repath.com
+    name: API Support
+  description: |-
+    A high-performance URL shortening and redirect service built with Go, Gin, MongoDB, and Redis.
+    This service provides URL shortening, custom aliases, and redirect functionality.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Re:Path Redirect Service API
+  version: "1.0"
+paths:
+  /{shortCode}:
+    get:
+      consumes:
+      - application/json
+      description: Returns the original URL information without performing a redirect
+      parameters:
+      - description: Short Code
+        in: path
+        name: shortCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Get original URL from short code
+      tags:
+      - Redirect
+  /api/info/{shortCode}:
+    get:
+      parameters:
+      - description: Short Code
+        in: path
+        name: shortCode
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Get URL information
+      tags:
+      - Redirect
+  /health:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Health check
+      tags:
+      - Health
+schemes:
+- http
+- https
+swagger: "2.0"

@@ -4,19 +4,30 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
-	"github.com/hoggir/re-path/redirect-service/internal/app/http"
-	"github.com/hoggir/re-path/redirect-service/internal/app/http/handler"
-	usersPkg "github.com/hoggir/re-path/redirect-service/internal/users"
+	"github.com/hoggir/re-path/redirect-service/internal/config"
+	"github.com/hoggir/re-path/redirect-service/internal/database"
+	"github.com/hoggir/re-path/redirect-service/internal/handler"
+	"github.com/hoggir/re-path/redirect-service/internal/repository"
+	"github.com/hoggir/re-path/redirect-service/internal/server"
+	"github.com/hoggir/re-path/redirect-service/internal/service"
 )
 
-func InitializeApp() *gin.Engine {
+func InitializeApp() (*server.Server, error) {
 	wire.Build(
-		usersPkg.NewUserRepository,
-		usersPkg.NewUserService,
-		handler.NewUserHandler,
-		http.NewRouter,
+		config.Load,
+
+		database.NewMongoDB,
+		database.NewRedis,
+
+		repository.NewURLRepository,
+
+		service.NewRedirectService,
+
+		handler.NewRedirectHandler,
+		handler.NewHealthHandler,
+
+		server.New,
 	)
-	return nil
+	return nil, nil
 }

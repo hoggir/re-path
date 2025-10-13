@@ -7,18 +7,30 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/hoggir/re-path/redirect-service/internal/app/http"
-	"github.com/hoggir/re-path/redirect-service/internal/app/http/handler"
-	"github.com/hoggir/re-path/redirect-service/internal/users"
+	"github.com/hoggir/re-path/redirect-service/internal/config"
+	"github.com/hoggir/re-path/redirect-service/internal/database"
+	"github.com/hoggir/re-path/redirect-service/internal/handler"
+	"github.com/hoggir/re-path/redirect-service/internal/repository"
+	"github.com/hoggir/re-path/redirect-service/internal/server"
+	"github.com/hoggir/re-path/redirect-service/internal/service"
 )
 
 // Injectors from wire.go:
 
-func InitializeApp() *gin.Engine {
-	userRepository := users.NewUserRepository()
-	userService := users.NewUserService(userRepository)
-	userHandler := handler.NewUserHandler(userService)
-	engine := http.NewRouter(userHandler)
-	return engine
+func InitializeApp() (*server.Server, error) {
+	configConfig := config.Load()
+	mongoDB, err := database.NewMongoDB(configConfig)
+	if err != nil {
+		return nil, err
+	}
+	urlRepository := repository.NewURLRepository(mongoDB)
+	redis, err := database.NewRedis(configConfig)
+	if err != nil {
+		return nil, err
+	}
+	redirectService := service.NewRedirectService(urlRepository, redis, configConfig)
+	redirectHandler := handler.NewRedirectHandler(redirectService)
+	healthHandler := handler.NewHealthHandler()
+	serverServer := server.New(configConfig, redirectHandler, healthHandler, mongoDB, redis)
+	return serverServer, nil
 }
