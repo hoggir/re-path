@@ -1,17 +1,33 @@
-// src/database/database.module.ts
 import { Module, Global } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from './database.service';
+import { PostgresService } from './postgres.service';
 
 @Global()
 @Module({
   imports: [
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const dbConfig = configService.get('database');
+
+        console.log('✅ Initializing PostgreSQL connection for Users/Auth...');
+
+        return {
+          ...dbConfig,
+          autoLoadEntities: true,
+        };
+      },
+    }),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const uri = configService.get<string>('database.uri');
-        const options = configService.get('database.options');
+        const uri = configService.get<string>('mongodb.uri');
+        const options = configService.get('mongodb.options');
+
+        console.log('✅ Initializing MongoDB connection for URLs...');
 
         return {
           uri,
@@ -29,7 +45,6 @@ import { DatabaseService } from './database.service';
               console.error('❌ MongoDB connection error:', error);
             });
 
-            // Middleware untuk logging (development only)
             if (process.env.NODE_ENV !== 'production') {
               // connection.set('debug', true);
             }
@@ -40,7 +55,7 @@ import { DatabaseService } from './database.service';
       },
     }),
   ],
-  providers: [DatabaseService],
-  exports: [DatabaseService],
+  providers: [DatabaseService, PostgresService],
+  exports: [DatabaseService, PostgresService],
 })
 export class DatabaseModule {}

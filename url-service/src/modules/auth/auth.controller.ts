@@ -132,12 +132,12 @@ export class AuthController {
     description: 'User successfully logged out',
     type: LogoutResponseDto,
   })
-  // @ApiResponse({
-  //   status: HttpStatus.UNAUTHORIZED,
-  //   description: 'Invalid or expired token',
-  //   type: ErrorResponseDto,
-  // })
-  async logout(@CurrentUser('userId') userId: string) {
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or expired token',
+    type: ErrorResponseDto,
+  })
+  async logout(@CurrentUser('userId') userId: number) {
     return this.authService.logout(userId);
   }
 

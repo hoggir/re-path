@@ -5,7 +5,7 @@ import {
   UpdateQuery,
   QueryOptions,
 } from 'mongoose';
-import { NotFoundException } from '../../common/exceptions/custom-exceptions';
+import { NotFoundException } from '@nestjs/common';
 
 export abstract class BaseRepository<T extends Document> {
   constructor(protected readonly model: Model<T>) {}
@@ -66,7 +66,6 @@ export abstract class BaseRepository<T extends Document> {
     return this.model.findByIdAndDelete(id).exec();
   }
 
-  // Soft delete
   async softDelete(id: string): Promise<T | null> {
     return this.model
       .findByIdAndUpdate(

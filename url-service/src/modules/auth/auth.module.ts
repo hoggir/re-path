@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { APP_GUARD } from '@nestjs/core';
 import authConfig from 'src/config/auth.config';
+import { IdEncryptionService } from '../../common/utils/id-encryption.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import authConfig from 'src/config/auth.config';
   ],
   controllers: [AuthController],
   providers: [
+    IdEncryptionService,
     AuthService,
     JwtStrategy,
     {

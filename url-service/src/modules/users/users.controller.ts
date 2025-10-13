@@ -78,7 +78,11 @@ export class UsersController {
   getProfile(@CurrentUser() user: any) {
     return {
       message: 'Profile retrieved',
-      data: user,
+      data: {
+        userId: user.encryptedUserId,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 
@@ -122,7 +126,11 @@ export class UsersController {
   adminOnly(@CurrentUser() user: any) {
     return {
       message: 'Admin access',
-      data: user,
+      data: {
+        userId: user.encryptedUserId,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 

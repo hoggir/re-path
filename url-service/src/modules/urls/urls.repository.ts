@@ -26,7 +26,7 @@ export class UrlRepository extends BaseRepository<Url> {
 
   async findByOriginalUrl(
     originalUrl: string,
-    userId?: string,
+    userId?: number,
   ): Promise<Url | null> {
     const query: any = { originalUrl, isDeleted: false };
     if (userId) {
@@ -38,52 +38,6 @@ export class UrlRepository extends BaseRepository<Url> {
   async findByCustomAlias(customAlias: string): Promise<Url | null> {
     return this.urlModel.findOne({ customAlias, isDeleted: false }).exec();
   }
-
-  // async incrementClickCount(shortCode: string): Promise<void> {
-  //   await this.urlModel
-  //     .findOneAndUpdate({ shortCode }, { $inc: { clickCount: 1 } })
-  //     .exec();
-  // }
-
-  // async addAnalytics(
-  //   shortCode: string,
-  //   analyticsData: {
-  //     ipAddress: string;
-  //     userAgent: string;
-  //     referer: string;
-  //     country?: string;
-  //     city?: string;
-  //   },
-  // ): Promise<void> {
-  //   await this.urlModel
-  //     .findOneAndUpdate(
-  //       { shortCode },
-  //       {
-  //         $push: {
-  //           analytics: {
-  //             ...analyticsData,
-  //             clickedAt: new Date(),
-  //           },
-  //         },
-  //         $inc: { clickCount: 1 },
-  //       },
-  //     )
-  //     .exec();
-  // }
-
-  // async findByUserId(userId: string, page: number = 1, limit: number = 10) {
-  //   return this.paginate({ userId, isActive: true }, page, limit, {
-  //     createdAt: -1,
-  //   });
-  // }
-
-  // async getTotalClicksByUserId(userId: string): Promise<number> {
-  //   const result = await this.urlModel.aggregate([
-  //     { $match: { userId, isDeleted: false } },
-  //     { $group: { _id: null, total: { $sum: '$clickCount' } } },
-  //   ]);
-  //   return result[0]?.total || 0;
-  // }
 
   async checkShortCodeExists(shortCode: string): Promise<boolean> {
     return this.exists({ shortCode });

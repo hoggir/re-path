@@ -71,7 +71,7 @@ UrlSchema.index({ isActive: 1 });
 
 // Virtual for short URL
 UrlSchema.virtual('shortUrl').get(function () {
-  return `${process.env.BASE_URL || 'http://localhost:3000'}/${this.shortCode}`;
+  return `${process.env.BASE_URL || 'http://localhost:3010'}/${this.shortCode}`;
 });
 
 // Transform to JSON

@@ -11,7 +11,7 @@ export class UrlResponseDto {
   @ApiProperty({ example: 'abc123' })
   shortCode: string;
 
-  @ApiProperty({ example: 'http://localhost:3000/abc123' })
+  @ApiProperty({ example: 'http://localhost:3010/abc123' })
   shortUrl: string;
 
   @ApiPropertyOptional({ example: 'my-custom-link' })

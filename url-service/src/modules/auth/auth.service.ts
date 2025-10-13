@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../../cache/redis.service';
 import * as bcrypt from 'bcrypt';
 import { UsersRepository } from '../users/users.repository';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { User } from '../users/schemas/user.schema';
+import { User } from '../users/entities/user.entity';
+import { IdEncryptionService } from '../../common/utils/id-encryption.service';
 
 @Injectable()
 export class AuthService {
@@ -17,10 +19,11 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
+    private readonly idEncryptionService: IdEncryptionService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    // Check if user already exists
     const existingUser = await this.usersRepository.findByEmail(
       registerDto.email,
     );
@@ -28,27 +31,21 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    // Hash password
     const hashedPassword = await this.hashPassword(registerDto.password);
-
-    // Create user
     const user = await this.usersRepository.create({
       ...registerDto,
       email: registerDto.email.toLowerCase(),
       password: hashedPassword,
     } as Partial<User>);
 
-    // Generate tokens
     const tokens = await this.generateTokens(user);
-
-    // Save refresh token
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     return {
       message: 'Registration successful',
       data: {
         user: {
-          id: user.id,
+          id: this.idEncryptionService.encryptId(user.id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -60,7 +57,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    // Find user by email
     const user = await this.usersRepository.findByEmailWithPassword(
       loginDto.email,
     );
@@ -69,12 +65,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is deactivated');
     }
 
-    // Verify password
     const isPasswordValid = await this.comparePassword(
       loginDto.password,
       user.password,
@@ -84,10 +78,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate tokens
     const tokens = await this.generateTokens(user);
 
-    // Save refresh token and update last login
     await Promise.all([
       this.updateRefreshToken(user.id, tokens.refreshToken),
       this.usersRepository.updateLastLogin(user.id),
@@ -97,7 +89,7 @@ export class AuthService {
       message: 'Login successful',
       data: {
         user: {
-          id: user.id,
+          id: this.idEncryptionService.encryptId(user.id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -111,29 +103,24 @@ export class AuthService {
 
   async refreshToken(refreshToken: string) {
     try {
-      // Verify refresh token
       const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get<string>('auth.jwt.secret'),
       });
 
-      // Find user by id and refresh token
       const user = await this.usersRepository.findById(payload.sub);
 
       if (!user || !user.isActive) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Verify stored refresh token
       const storedUser =
         await this.usersRepository.findByRefreshToken(refreshToken);
       if (!storedUser) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Generate new tokens
       const tokens = await this.generateTokens(user);
 
-      // Update refresh token
       await this.updateRefreshToken(user.id, tokens.refreshToken);
 
       return {
@@ -145,9 +132,10 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string) {
-    // Remove refresh token
+  async logout(userId: number) {
     await this.updateRefreshToken(userId, null);
+
+    await this.redisService.del(`user:${userId}`);
 
     return {
       message: 'Logout successful',
@@ -155,7 +143,7 @@ export class AuthService {
     };
   }
 
-  async validateUser(userId: string): Promise<User> {
+  async validateUser(userId: number): Promise<User> {
     const user = await this.usersRepository.findById(userId);
 
     if (!user || !user.isActive) {
@@ -165,7 +153,6 @@ export class AuthService {
     return user;
   }
 
-  // Helper methods
   private async generateTokens(user: User) {
     const payload = {
       sub: user.id,
@@ -209,7 +196,7 @@ export class AuthService {
   }
 
   private async updateRefreshToken(
-    userId: string,
+    userId: number,
     refreshToken: string | null,
   ): Promise<void> {
     const hashedRefreshToken = refreshToken

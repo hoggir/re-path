@@ -12,7 +12,7 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const port = configService.get('PORT', 3000);
+  const port = configService.get('PORT', 3010);
 
   // Global prefix untuk semua routes
   app.setGlobalPrefix('api');
@@ -78,7 +78,6 @@ async function bootstrap() {
       .addTag('Users', 'User management endpoints')
       .addTag('Health', 'Health check and monitoring endpoints')
       .addTag('URL Shortener', 'Shortened URL management endpoints')
-      .addServer('http://localhost:8080', 'Nginx Gateway')
       .addServer(`http://localhost:${port}`, 'Local Development')
       // .addServer('https://api-staging.repath.com', 'Staging')
       // .addServer('https://api.repath.com', 'Production')
@@ -108,12 +107,40 @@ async function bootstrap() {
     );
   }
 
-  // Graceful shutdown
-  app.enableShutdownHooks();
-
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+
+  // Graceful shutdown
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n⚠️  Received ${signal}, starting graceful shutdown...`);
+
+    try {
+      await app.close();
+      console.log('✅ Application closed successfully');
+
+      console.log('📦 Closing database connections...');
+
+      console.log('👋 Shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Error during shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('unhandledRejection');
+  });
 }
 
 bootstrap().catch((err) => {

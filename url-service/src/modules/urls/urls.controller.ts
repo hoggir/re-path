@@ -48,7 +48,7 @@ export class UrlController {
   })
   async createShortUrl(
     @Body() createUrlDto: CreateUrlDto,
-    @CurrentUser('userId') userId: string,
+    @CurrentUser('userId') userId: number,
   ) {
     const url = await this.urlService.createShortUrl(createUrlDto, userId);
 
@@ -57,41 +57,4 @@ export class UrlController {
       data: url,
     };
   }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post('create')
-  // @HttpCode(HttpStatus.CREATED)
-  // @ApiBody({ type: CreateUrlDto })
-  // @ApiOperation({
-  //   summary: 'Create Short URL',
-  //   description: 'Create a short URL for user.',
-  // })
-  // @ApiResponse({
-  //   status: HttpStatus.UNAUTHORIZED,
-  //   description: 'Invalid or expired token',
-  //   type: ErrorResponseDto,
-  // })
-  // @ApiResponse({
-  //   status: HttpStatus.CREATED,
-  //   description: 'Short URL created successfully',
-  //   type: UrlResponseDto,
-  // })
-  // @ApiResponse({
-  //   status: HttpStatus.BAD_REQUEST,
-  //   description: 'Validation error',
-  //   type: ValidationErrorResponseDto,
-  // })
-  // async createShortUrl(
-  //   @CurrentUser() user: UserTokenInterface,
-  //   @Body() createUrlDto: CreateUrlDto,
-  // ) {
-  //   const shortUrl = await this.urlService.createShortUrl(
-  //     createUrlDto,
-  //     user.userId,
-  //   );
-  //   return {
-  //     message: 'Short URL created successfully',
-  //     data: 'shortUrl',
-  //   };
-  // }
 }

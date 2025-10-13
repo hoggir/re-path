@@ -1,5 +1,5 @@
 export type UserTokenInterface = {
-  userId: string;
+  userId: number;
   email: string;
   role: string;
 };

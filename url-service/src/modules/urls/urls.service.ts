@@ -24,7 +24,7 @@ export class UrlService {
 
   async createShortUrl(
     createUrlDto: CreateUrlDto,
-    userId: string,
+    userId: number,
   ): Promise<Url> {
     try {
       const normalizedUrl = this.normalizeUrl(createUrlDto.originalUrl);
@@ -51,7 +51,7 @@ export class UrlService {
         originalUrl: normalizedUrl,
         shortCode,
         customAlias: createUrlDto.customAlias,
-        userId: new (require('mongoose').Types.ObjectId)(userId),
+        userId: userId as any,
         title: createUrlDto.title,
         description: createUrlDto.description,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -137,7 +137,7 @@ export class UrlService {
 
   // Strategy 3: Timestamp-based with random suffix
   private generateTimestampBasedCode(length: number): string {
-    const timestamp = Date.now().toString(36); // Convert to base36
+    const timestamp = Date.now().toString(36);
     const randomSuffix = this.generateBase62ShortCode(
       Math.max(1, length - timestamp.length),
     );
@@ -193,15 +193,14 @@ export class UrlService {
   /**
    * Get URL statistics
    */
-  async getUrlStats(shortCode: string, userId?: string): Promise<any> {
+  async getUrlStats(shortCode: string, userId?: number): Promise<any> {
     const url = await this.urlRepository.findByShortCode(shortCode);
 
     if (!url) {
       throw new NotFoundException('Short URL not found');
     }
 
-    // Check ownership if userId provided
-    if (userId && url.userId?.toString() !== userId) {
+    if (userId && url.userId?.toString() !== userId.toString()) {
       throw new BadRequestException(
         'You do not have access to this URL statistics',
       );

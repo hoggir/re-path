@@ -1,18 +1,22 @@
 import { registerAs } from '@nestjs/config';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-export default registerAs('database', () => ({
-  uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/repath',
-  options: {
-    retryWrites: true,
-    w: 'majority',
-    maxPoolSize:
-      parseInt(process.env.MONGODB_MAX_POOL_SIZE as string, 10) || 10,
-    minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE as string, 10) || 2,
-    socketTimeoutMS:
-      parseInt(process.env.MONGODB_SOCKET_TIMEOUT as string, 10) || 45000,
-    serverSelectionTimeoutMS:
-      parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT as string, 10) ||
-      5000,
-    family: 4, // Use IPv4, skip trying IPv6
-  },
-}));
+export default registerAs(
+  'database',
+  (): TypeOrmModuleOptions => ({
+    type: 'postgres',
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: parseInt(process.env.DATABASE_PORT as string, 10) || 5432,
+    username: process.env.DATABASE_USERNAME || 'postgres',
+    password: process.env.DATABASE_PASSWORD || 'postgres',
+    database: process.env.DATABASE_NAME || 're-path',
+    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    synchronize: process.env.NODE_ENV !== 'production',
+    logging: process.env.NODE_ENV !== 'production',
+    ssl:
+      process.env.DATABASE_SSL === 'true'
+        ? { rejectUnauthorized: false }
+        : false,
+    poolSize: parseInt(process.env.DATABASE_POOL_SIZE as string, 10) || 10,
+  }),
+);

@@ -19,8 +19,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    this.logger.log('🔌 Closing MongoDB connection...');
     await this.connection.close();
-    this.logger.log('Database connection closed');
+    this.logger.log('✅ MongoDB connection closed successfully');
   }
 
   getDbHandle(): Connection {
