@@ -25,7 +25,6 @@ install:
 	go mod tidy
 	@echo "📦 Installing dev tools (air + wire + swag)..."
 	go install github.com/air-verse/air@latest
-	go install github.com/google/wire/cmd/wire@v0.6.0
 	go install github.com/swaggo/swag/cmd/swag@latest
 	@echo "✅ Installation complete (Wire v0.6.0 - stable)"
 

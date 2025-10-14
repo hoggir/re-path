@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  analytic-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: analytic-service
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=analytic-service
+      - APP_VERSION=0.1.0
+      - APP_ENV=development
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=info
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for development hot-reload
+      - ./app:/app/app:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - repath-network
+
+  # Development service with hot-reload
+  analytic-service-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: analytic-service-dev
+    ports:
+      - "8001:8000"
+    environment:
+      - APP_NAME=analytic-service
+      - APP_VERSION=0.1.0
+      - APP_ENV=development
+      - HOST=0.0.0.0
+      - PORT=8000
+      - RELOAD=true
+      - LOG_LEVEL=debug
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    networks:
+      - repath-network
+    profiles:
+      - dev
+
+networks:
+  repath-network:
+    driver: bridge
