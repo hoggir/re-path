@@ -23,7 +23,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -60,10 +60,6 @@ services:
       start_period: 60s
     profiles:
       - kibana
-
-volumes:
-  elasticsearch-data:
-    driver: local
 
 networks:
   repath-network:

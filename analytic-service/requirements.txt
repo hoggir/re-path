@@ -7,3 +7,4 @@ python-dotenv>=1.0.0
 # Database
 motor>=3.3.0
 beanie>=1.24.0
+opensearch-py>=3.0.0

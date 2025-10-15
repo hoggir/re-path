@@ -59,6 +59,16 @@ class Settings(BaseSettings):
         description="Minimum number of MongoDB connections in pool",
     )
 
+    # OpenSearch
+    opensearch_url: str = Field(
+        default="https://localhost:9200",
+        description="OpenSearch connection URL",
+    )
+    opensearch_index_prefix: str = Field(
+        default="repath",
+        description="Prefix for OpenSearch indices",
+    )
+
     @property
     def is_production(self) -> bool:
         """Check if running in production environment."""
