@@ -61,6 +61,7 @@ async def health_check() -> ApiResponse[HealthData]:
 
     # Convert to DatabaseHealth schema
     from app.schemas.health import DatabaseHealth
+
     db_health = DatabaseHealth(
         connected=db_health_check.connected,
         database=db_health_check.database,

@@ -73,6 +73,35 @@ class OpenSearchService:
         return response
 
     @staticmethod
+    async def search_all(
+        index_type: str,
+        query: dict[str, Any],
+        from_: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Search documents in OpenSearch.
+
+        Args:
+            index_type: Type of index to search.
+            query: OpenSearch query DSL.
+            size: Number of results to return.
+            from_: Offset for pagination.
+
+        Returns:
+            Dict containing search results.
+        """
+        client = OpenSearchManager.get_client()
+        index_name = OpenSearchManager.get_index_name(index_type)
+
+        response = await client.search(
+            index=index_name,
+            body={"query": query},
+            from_=from_,
+        )
+
+        return response
+
+    @staticmethod
     async def get_document(index_type: str, doc_id: str) -> Optional[dict[str, Any]]:
         """
         Get a document by ID.

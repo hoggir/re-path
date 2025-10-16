@@ -5,7 +5,7 @@ from typing import Optional
 
 from beanie import Document
 from pydantic import Field
-from pymongo import IndexModel, ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING, IndexModel
 
 
 class ClickEvent(Document):

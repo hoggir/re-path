@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
-from app.api.v1 import analytics, health, dashboard
+from app.api.v1 import analytics, dashboard, health
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.exceptions import (
@@ -29,9 +29,7 @@ from app.services.message_handler import create_message_handler
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 
 # Set log level for specific loggers

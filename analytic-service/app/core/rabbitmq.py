@@ -83,9 +83,7 @@ class RabbitMQConsumer:
         # Set QoS to prefetch 1 message at a time
         self._channel.basic_qos(prefetch_count=1)
 
-        logger.info(
-            f"✅ Channel setup complete - Queue: {settings.rabbitmq_queue}, "
-        )
+        logger.info(f"✅ Channel setup complete - Queue: {settings.rabbitmq_queue}, ")
 
     def start_consuming(self) -> None:
         """Start consuming messages from the queue."""
@@ -157,7 +155,9 @@ class RabbitMQConsumer:
             if self._message_handler:
                 await self._message_handler(data)
             else:
-                logger.warning("No message handler set, message will be acknowledged but not processed")
+                logger.warning(
+                    "No message handler set, message will be acknowledged but not processed"
+                )
 
             # Acknowledge the message
             channel.basic_ack(delivery_tag=method.delivery_tag)

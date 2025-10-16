@@ -1,14 +1,15 @@
 """Health check endpoints."""
 
-from datetime import datetime
+import logging
 
 from fastapi import APIRouter, status
 
-from app.core.config import settings
 from app.schemas.dashboard import DashboardData
 from app.schemas.response import ApiResponse, create_response
+from app.services.opensearch_service import OpenSearchService
 
 router = APIRouter(tags=["Dashboard"])
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -39,7 +40,26 @@ router = APIRouter(tags=["Dashboard"])
         }
     },
 )
-async def first_dashboard() -> ApiResponse[DashboardData]:
+async def first_dashboard(
+    # request: SearchRequest,
+) -> ApiResponse[DashboardData]:
+    response = await OpenSearchService.search_all(
+        index_type="click_events",
+        query={"match": {"short_code": "my-custom-link"}},
+        from_=0,
+    )
+
+    # first_short_code = response["hits"]
+    hits = response.get("hits", {})
+    # total_data = hits.get{"value", 0}
+    total_data = hits.get("total", {}).get("value", 0)
+
+    # short_codes = [hit["_source"]]
+    print(hits)
+    print(total_data)
+
+    # logger.info("Data", response)
+    # logger.info(f"✅ Data : {response}, ")
     dashboard_data = DashboardData(
         status="healthy",
     )

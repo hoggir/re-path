@@ -314,7 +314,7 @@ async def get_clicks_by_shortcode(
             "bool": {
                 "must": [
                     {"term": {"metadata.shortCode.keyword": short_code}},
-                    {"term": {"event_type.keyword": "location"}}
+                    {"term": {"event_type.keyword": "location"}},
                 ]
             }
         }
@@ -337,11 +337,7 @@ async def get_clicks_by_shortcode(
             "shortCode": short_code,
             "total_clicks": total,
             "clicks": documents,
-            "pagination": {
-                "size": size,
-                "from": from_,
-                "returned": len(documents)
-            }
+            "pagination": {"size": size, "from": from_, "returned": len(documents)},
         }
 
         return create_response(

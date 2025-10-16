@@ -1,7 +1,6 @@
 """Dashboard check schemas."""
 
-from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
