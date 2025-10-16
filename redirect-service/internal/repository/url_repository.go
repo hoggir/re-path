@@ -10,6 +10,7 @@ import (
 	"github.com/hoggir/re-path/redirect-service/internal/domain"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 )
 
 type URLRepository interface {
-	FindByShortCode(ctx context.Context, shortCode string) (*domain.URL, error)
+	FindByShortCode(ctx context.Context, shortCode string) (*domain.FindByShortCode, error)
 }
 
 type urlRepository struct {
@@ -34,16 +35,14 @@ func NewURLRepository(db *database.MongoDB) URLRepository {
 	}
 }
 
-func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (*domain.URL, error) {
-	var url domain.URL
+func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (*domain.FindByShortCode, error) {
+	var url domain.FindByShortCode
 
-	// Simple query - hanya filter by shortCode
-	// TIDAK filter expiresAt di query
 	filter := bson.M{
 		"shortCode": shortCode,
 	}
 
-	err := r.collection.FindOne(ctx, filter).Decode(&url)
+	err := r.collection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"originalUrl": 1, "isActive": 1, "expiresAt": 1, "_id": 0})).Decode(&url)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, ErrURLNotFound
@@ -51,13 +50,10 @@ func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (
 		return nil, fmt.Errorf("failed to find url: %w", err)
 	}
 
-	// Check kondisi SETELAH fetch dari database
-	// 1. Check if inactive
 	if !url.IsActive {
 		return nil, ErrURLInactive
 	}
 
-	// 2. Check if expired
 	if url.ExpiresAt != nil && url.ExpiresAt.Before(time.Now()) {
 		return nil, ErrURLExpired
 	}

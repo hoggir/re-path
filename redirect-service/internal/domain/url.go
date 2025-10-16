@@ -26,6 +26,12 @@ type URLMetadata struct {
 	Tags        []string `bson:"tags,omitempty" json:"tags,omitempty"`
 }
 
+type FindByShortCode struct {
+	OriginalURL string     `bson:"originalUrl" json:"originalUrl"`
+	IsActive    bool       `bson:"isActive" json:"isActive"`
+	ExpiresAt   *time.Time `bson:"expiresAt,omitempty" json:"expiresAt,omitempty"`
+}
+
 func (URL) CollectionName() string {
 	return "urls"
 }

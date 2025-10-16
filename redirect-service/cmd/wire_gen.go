@@ -28,8 +28,12 @@ func InitializeApp() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	redirectService := service.NewRedirectService(urlRepository, redis, configConfig)
-	redirectHandler := handler.NewRedirectHandler(redirectService)
+	cacheService := service.NewCacheService(redis, configConfig)
+	redirectService := service.NewRedirectService(urlRepository, cacheService, configConfig)
+	clickEventRepository := repository.NewClickEventRepository(mongoDB)
+	geoIPService := service.NewGeoIPService(cacheService, configConfig)
+	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService)
+	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService)
 	healthHandler := handler.NewHealthHandler()
 	serverServer := server.New(configConfig, redirectHandler, healthHandler, mongoDB, redis)
 	return serverServer, nil

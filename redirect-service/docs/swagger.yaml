@@ -1,5 +1,23 @@
 basePath: /
 definitions:
+  dto.HealthResponse:
+    properties:
+      service:
+        example: redirect-service
+        type: string
+      status:
+        example: UP
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  dto.RedirectResponse:
+    properties:
+      originalUrl:
+        example: https://example.com
+        type: string
+    type: object
   dto.Response:
     properties:
       data: {}
@@ -51,7 +69,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.HealthResponse'
+              type: object
       summary: Health check
       tags:
       - Health
@@ -72,7 +95,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RedirectResponse'
+              type: object
         "404":
           description: Not Found
           schema:

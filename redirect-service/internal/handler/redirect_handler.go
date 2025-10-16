@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -12,12 +13,17 @@ import (
 )
 
 type RedirectHandler struct {
-	redirectService service.RedirectService
+	redirectService   service.RedirectService
+	clickEventService service.ClickEventService
 }
 
-func NewRedirectHandler(redirectService service.RedirectService) *RedirectHandler {
+func NewRedirectHandler(
+	redirectService service.RedirectService,
+	clickEventService service.ClickEventService,
+) *RedirectHandler {
 	return &RedirectHandler{
-		redirectService: redirectService,
+		redirectService:   redirectService,
+		clickEventService: clickEventService,
 	}
 }
 
@@ -28,7 +34,7 @@ func NewRedirectHandler(redirectService service.RedirectService) *RedirectHandle
 // @Accept json
 // @Produce json
 // @Param shortCode path string true "Short Code"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=dto.RedirectResponse}
 // @Failure 404 {object} dto.Response
 // @Router /r/{shortCode} [get]
 func (h *RedirectHandler) Redirect(c *gin.Context) {
@@ -57,18 +63,19 @@ func (h *RedirectHandler) Redirect(c *gin.Context) {
 			return
 		}
 
-		// Generic error
 		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve URL", nil)
 		return
 	}
 
-	log.Printf("✅ Retrieved URL for %s -> %s (clicks: %d)", shortCode, url.OriginalURL, url.ClickCount+1)
+	go func() {
+		ctx := context.Background()
+		if err := h.clickEventService.TrackClick(ctx, c, shortCode); err != nil {
+			log.Printf("⚠️  Failed to track click for shortCode %s: %v", shortCode, err)
+		}
+	}()
 
-	// Return URL information as JSON response (no redirect)
 	response := dto.RedirectResponse{
-		ShortCode:   url.ShortCode,
 		OriginalURL: url.OriginalURL,
-		ClickCount:  url.ClickCount,
 	}
 
 	dto.SuccessResponse(c, http.StatusOK, "URL retrieved successfully", response)
@@ -111,9 +118,9 @@ func (h *RedirectHandler) GetURLInfo(c *gin.Context) {
 	}
 
 	response := dto.RedirectResponse{
-		ShortCode:   url.ShortCode,
+		// ShortCode:   url.ShortCode,
 		OriginalURL: url.OriginalURL,
-		ClickCount:  url.ClickCount,
+		// ClickCount:  url.ClickCount,
 	}
 
 	dto.SuccessResponse(c, http.StatusOK, "URL info retrieved successfully", response)

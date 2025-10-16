@@ -16,11 +16,14 @@ func NewHealthHandler() *HealthHandler {
 // Health check endpoint
 // @Summary Health check
 // @Tags Health
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=dto.HealthResponse}
 // @Router /health [get]
 func (h *HealthHandler) Health(c *gin.Context) {
-	dto.SuccessResponse(c, http.StatusOK, "Service is healthy", gin.H{
-		"status": "UP",
-		"service": "redirect-service",
-	})
+	response := dto.HealthResponse{
+		Status:  "UP",
+		Service: "redirect-service",
+		Version: "1.0.0",
+	}
+
+	dto.SuccessResponse(c, http.StatusOK, "Service is healthy", response)
 }

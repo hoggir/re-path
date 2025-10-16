@@ -21,8 +21,12 @@ func InitializeApp() (*server.Server, error) {
 		database.NewRedis,
 
 		repository.NewURLRepository,
+		repository.NewClickEventRepository,
 
+		service.NewCacheService,
+		service.NewGeoIPService,
 		service.NewRedirectService,
+		service.NewClickEventService,
 
 		handler.NewRedirectHandler,
 		handler.NewHealthHandler,
