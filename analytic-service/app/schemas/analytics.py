@@ -1,7 +1,7 @@
 """Analytics schemas for request and response models."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +14,7 @@ class AnalyticsDataRequest(BaseModel):
         description="Type of index to store data (e.g., 'analytics', 'events', 'logs')",
         examples=["analytics", "events", "logs"],
     )
-    data: Dict[str, Any] = Field(
+    data: dict[str, Any] = Field(
         description="JSON data to be indexed in OpenSearch",
         examples=[
             {
@@ -59,7 +59,7 @@ class BulkAnalyticsDataRequest(BaseModel):
         description="Type of index to store data",
         examples=["analytics", "events"],
     )
-    documents: list[Dict[str, Any]] = Field(
+    documents: list[dict[str, Any]] = Field(
         description="List of JSON documents to be indexed",
         min_length=1,
     )
@@ -132,7 +132,7 @@ class BulkAnalyticsDataResponse(BaseModel):
         description="Number of failed documents",
         examples=[1],
     )
-    errors: Optional[list[Dict[str, Any]]] = Field(
+    errors: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="List of errors if any occurred",
     )
@@ -162,7 +162,7 @@ class SearchRequest(BaseModel):
         description="Type of index to search",
         examples=["analytics", "events"],
     )
-    query: Dict[str, Any] = Field(
+    query: dict[str, Any] = Field(
         description="OpenSearch query DSL",
         examples=[{"match": {"event_type": "page_view"}}],
     )

@@ -1,7 +1,7 @@
 """Global response schemas for standardized API responses."""
 
 from datetime import datetime
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -119,7 +119,7 @@ class ErrorResponse(BaseModel):
         description="General error message",
         examples=["Request failed", "Validation error occurred"],
     )
-    errors: List[ErrorDetail] = Field(
+    errors: list[ErrorDetail] = Field(
         default_factory=list,
         description="List of detailed errors",
     )
@@ -210,7 +210,7 @@ class PaginatedResponse(BaseModel, Generic[DataT]):
         description="Response message",
         examples=["Data retrieved successfully"],
     )
-    data: List[DataT] = Field(
+    data: list[DataT] = Field(
         default_factory=list,
         description="List of items",
     )
@@ -273,7 +273,7 @@ def create_response(
 # Helper function to create error response
 def create_error_response(
     message: str,
-    errors: Optional[List[ErrorDetail]] = None,
+    errors: Optional[list[ErrorDetail]] = None,
     request_id: Optional[str] = None,
 ) -> ErrorResponse:
     """

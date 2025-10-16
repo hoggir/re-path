@@ -1,7 +1,9 @@
 """Main FastAPI application entry point."""
 
+import logging
+import sys
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -12,14 +14,29 @@ from pydantic import ValidationError
 from app.api.v1 import analytics, health
 from app.core.config import settings
 from app.core.database import DatabaseManager
-from app.core.opensearch import OpenSearchManager
 from app.core.exceptions import (
     AppException,
     app_exception_handler,
     generic_exception_handler,
     validation_exception_handler,
 )
+from app.core.opensearch import OpenSearchManager
+from app.core.rabbitmq import RabbitMQConsumerManager
 from app.models import ALL_MODELS
+from app.services.message_handler import create_message_handler
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+# Set log level for specific loggers
+logging.getLogger("app.services.message_handler").setLevel(logging.INFO)
+logging.getLogger("app.core.rabbitmq").setLevel(logging.INFO)
 
 
 @asynccontextmanager
@@ -49,10 +66,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"⚠️  Failed to connect to OpenSearch: {e}")
         print("⚠️  Service will continue without OpenSearch connection")
 
+    # Start RabbitMQ Consumer
+    try:
+        await RabbitMQConsumerManager.start_consumer(create_message_handler)
+    except Exception as e:
+        print(f"⚠️  Failed to start RabbitMQ consumer: {e}")
+        print("⚠️  Service will continue without RabbitMQ consumer")
+
     yield
 
     # Shutdown
     print(f"👋 Shutting down {settings.app_name}")
+    await RabbitMQConsumerManager.stop_consumer()
     await DatabaseManager.close_database_connection()
     await OpenSearchManager.close_opensearch_connection()
 

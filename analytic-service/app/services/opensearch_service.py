@@ -1,7 +1,7 @@
 """OpenSearch service for analytics operations."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from app.core.opensearch import OpenSearchManager
 
@@ -12,9 +12,9 @@ class OpenSearchService:
     @staticmethod
     async def index_document(
         index_type: str,
-        document: Dict[str, Any],
+        document: dict[str, Any],
         doc_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Index a document in OpenSearch.
 
@@ -44,10 +44,10 @@ class OpenSearchService:
     @staticmethod
     async def search(
         index_type: str,
-        query: Dict[str, Any],
+        query: dict[str, Any],
         size: int = 10,
         from_: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search documents in OpenSearch.
 
@@ -73,7 +73,7 @@ class OpenSearchService:
         return response
 
     @staticmethod
-    async def get_document(index_type: str, doc_id: str) -> Optional[Dict[str, Any]]:
+    async def get_document(index_type: str, doc_id: str) -> Optional[dict[str, Any]]:
         """
         Get a document by ID.
 
@@ -94,7 +94,7 @@ class OpenSearchService:
             return None
 
     @staticmethod
-    async def delete_document(index_type: str, doc_id: str) -> Dict[str, Any]:
+    async def delete_document(index_type: str, doc_id: str) -> dict[str, Any]:
         """
         Delete a document by ID.
 
@@ -114,8 +114,8 @@ class OpenSearchService:
     @staticmethod
     async def bulk_index(
         index_type: str,
-        documents: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        documents: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """
         Bulk index multiple documents.
 
@@ -144,9 +144,9 @@ class OpenSearchService:
     @staticmethod
     async def create_index(
         index_type: str,
-        mappings: Optional[Dict[str, Any]] = None,
-        settings: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        mappings: Optional[dict[str, Any]] = None,
+        settings: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
         """
         Create an index with optional mappings and settings.
 

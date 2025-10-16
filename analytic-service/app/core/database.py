@@ -1,6 +1,6 @@
 """MongoDB database connection manager using Beanie ODM."""
 
-from typing import List, Optional
+from typing import Optional
 
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -16,7 +16,7 @@ class DatabaseManager:
     database: Optional[AsyncIOMotorDatabase] = None
 
     @classmethod
-    async def connect_to_database(cls, document_models: List[type]) -> None:
+    async def connect_to_database(cls, document_models: list[type]) -> None:
         """
         Connect to MongoDB and initialize Beanie ODM.
 

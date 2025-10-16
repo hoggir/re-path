@@ -1,13 +1,11 @@
 """Database models module."""
 
-from typing import List
-
-from app.models.analytics_event import AnalyticsEvent
+from app.models.click_event import ClickEvent
 
 # List of all Beanie document models
 # Add new models here to register them with Beanie
-ALL_MODELS: List[type] = [
-    AnalyticsEvent,
+ALL_MODELS: list[type] = [
+    ClickEvent,
 ]
 
-__all__ = ["AnalyticsEvent", "ALL_MODELS"]
+__all__ = ["ClickEvent", "ALL_MODELS"]

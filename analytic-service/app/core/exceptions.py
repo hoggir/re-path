@@ -1,6 +1,6 @@
 """Custom exceptions and exception handlers."""
 
-from typing import Any, Union
+from typing import Union
 
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError

@@ -12,23 +12,23 @@ up:
 # Stop RabbitMQ
 down:
 	@echo "🛑 Stopping RabbitMQ..."
-	docker-compose -f docker-compose.yml down
+	docker compose -f docker-compose.yml down
 	@echo "✅ RabbitMQ stopped"
 
 # View RabbitMQ logs
 logs:
-	docker-compose -f docker-compose.yml logs -f rabbitmq
+	docker compose -f docker-compose.yml logs -f rabbitmq
 
 # Restart RabbitMQ
 restart:
 	@echo "🔄 Restarting RabbitMQ..."
-	docker-compose -f docker-compose.yml restart
+	docker compose -f docker-compose.yml restart
 	@echo "✅ RabbitMQ restarted"
 
 # Clean RabbitMQ (remove volumes)
 clean:
 	@echo "🧹 Cleaning RabbitMQ data..."
-	docker-compose -f docker-compose.yml down -v
+	docker compose -f docker-compose.yml down -v
 	@echo "✅ RabbitMQ cleaned"
 
 # Open RabbitMQ Management UI

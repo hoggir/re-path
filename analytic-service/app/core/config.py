@@ -1,7 +1,5 @@
 """Application configuration using Pydantic Settings."""
 
-from typing import List
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,13 +28,13 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/api/v1", description="API v1 prefix")
 
     # CORS
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:8000"],
         description="Allowed CORS origins",
     )
     cors_allow_credentials: bool = Field(default=True, description="Allow credentials in CORS")
-    cors_allow_methods: List[str] = Field(default=["*"], description="Allowed HTTP methods")
-    cors_allow_headers: List[str] = Field(default=["*"], description="Allowed HTTP headers")
+    cors_allow_methods: list[str] = Field(default=["*"], description="Allowed HTTP methods")
+    cors_allow_headers: list[str] = Field(default=["*"], description="Allowed HTTP headers")
 
     # Logging
     log_level: str = Field(default="info", description="Logging level")
@@ -67,6 +65,24 @@ class Settings(BaseSettings):
     opensearch_index_prefix: str = Field(
         default="repath",
         description="Prefix for OpenSearch indices",
+    )
+
+    # RabbitMQ
+    rabbitmq_url: str = Field(
+        default="amqp://guest:guest@localhost:5672/",
+        description="RabbitMQ connection URL",
+    )
+    rabbitmq_queue: str = Field(
+        default="click_events",
+        description="RabbitMQ queue name for click events",
+    )
+    rabbitmq_exchange: str = Field(
+        default="analytics",
+        description="RabbitMQ exchange name",
+    )
+    rabbitmq_routing_key: str = Field(
+        default="analytics.click",
+        description="RabbitMQ routing key",
     )
 
     @property
