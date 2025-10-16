@@ -32,7 +32,12 @@ func InitializeApp() (*server.Server, error) {
 	redirectService := service.NewRedirectService(urlRepository, cacheService, configConfig)
 	clickEventRepository := repository.NewClickEventRepository(mongoDB)
 	geoIPService := service.NewGeoIPService(cacheService, configConfig)
-	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService)
+	rabbitMQ, err := database.NewRabbitMQ(configConfig)
+	if err != nil {
+		return nil, err
+	}
+	rabbitMQService := service.NewRabbitMQService(rabbitMQ)
+	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, rabbitMQService)
 	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService)
 	healthHandler := handler.NewHealthHandler()
 	serverServer := server.New(configConfig, redirectHandler, healthHandler, mongoDB, redis)

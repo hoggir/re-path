@@ -19,12 +19,14 @@ func InitializeApp() (*server.Server, error) {
 
 		database.NewMongoDB,
 		database.NewRedis,
+		database.NewRabbitMQ,
 
 		repository.NewURLRepository,
 		repository.NewClickEventRepository,
 
 		service.NewCacheService,
 		service.NewGeoIPService,
+		service.NewRabbitMQService,
 		service.NewRedirectService,
 		service.NewClickEventService,
 

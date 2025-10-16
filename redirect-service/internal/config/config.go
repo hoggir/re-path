@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	App     AppConfig
-	MongoDB MongoDBConfig
-	Redis   RedisConfig
-	Server  ServerConfig
-	CORS    CORSConfig
+	App      AppConfig
+	MongoDB  MongoDBConfig
+	Redis    RedisConfig
+	RabbitMQ RabbitMQConfig
+	Server   ServerConfig
+	CORS     CORSConfig
 }
 
 type AppConfig struct {
@@ -35,6 +36,15 @@ type RedisConfig struct {
 	Password string
 	DB       int
 	CacheTTL time.Duration
+}
+
+type RabbitMQConfig struct {
+	URL    string
+	Queues QueueConfig
+}
+
+type QueueConfig struct {
+	ClickEvents string
 }
 
 type ServerConfig struct {
@@ -70,6 +80,12 @@ func Load() *Config {
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getEnvAsInt("REDIS_DB", 0),
 			CacheTTL: time.Duration(getEnvAsInt("REDIS_CACHE_TTL", 3600)) * time.Second,
+		},
+		RabbitMQ: RabbitMQConfig{
+			URL: getEnv("RABBITMQ_URL", "amqp://repath:repath123@localhost:5672/repath"),
+			Queues: QueueConfig{
+				ClickEvents: getEnv("QUEUE_CLICK_EVENTS", "click_events"),
+			},
 		},
 		Server: ServerConfig{
 			GinMode:        getEnv("GIN_MODE", "debug"),
