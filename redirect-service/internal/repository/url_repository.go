@@ -21,6 +21,7 @@ var (
 
 type URLRepository interface {
 	FindByShortCode(ctx context.Context, shortCode string) (*domain.FindByShortCode, error)
+	IncrementClickCount(ctx context.Context, shortCode string) error
 }
 
 type urlRepository struct {
@@ -59,4 +60,30 @@ func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (
 	}
 
 	return &url, nil
+}
+
+func (r *urlRepository) IncrementClickCount(ctx context.Context, shortCode string) error {
+	filter := bson.M{
+		"shortCode": shortCode,
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"clickCount": 1,
+		},
+		"$set": bson.M{
+			"updatedAt": time.Now(),
+		},
+	}
+
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to increment click count: %w", err)
+	}
+
+	if result.MatchedCount == 0 {
+		return ErrURLNotFound
+	}
+
+	return nil
 }

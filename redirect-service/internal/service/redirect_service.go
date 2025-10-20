@@ -12,6 +12,7 @@ import (
 
 type RedirectService interface {
 	GetURL(ctx context.Context, shortCode string) (*domain.FindByShortCode, error)
+	IncrementClickCount(ctx context.Context, shortCode string) error
 }
 
 type redirectService struct {
@@ -53,4 +54,8 @@ func (s *redirectService) GetURL(ctx context.Context, shortCode string) (*domain
 	}
 
 	return urlData, nil
+}
+
+func (s *redirectService) IncrementClickCount(ctx context.Context, shortCode string) error {
+	return s.urlRepo.IncrementClickCount(ctx, shortCode)
 }

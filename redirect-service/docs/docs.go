@@ -74,7 +74,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/info/{shortCode}": {
+        "/api/info/{shortUrl}": {
             "get": {
                 "tags": [
                     "Redirect"
@@ -133,7 +133,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/r/{shortCode}": {
+        "/r/{shortUrl}": {
             "get": {
                 "description": "Returns the original URL information without performing a redirect",
                 "consumes": [
@@ -145,12 +145,12 @@ const docTemplate = `{
                 "tags": [
                     "Redirect"
                 ],
-                "summary": "Get original URL from short code",
+                "summary": "Get original URL from short url",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Short Code",
-                        "name": "shortCode",
+                        "description": "Short Url",
+                        "name": "shortUrl",
                         "in": "path",
                         "required": true
                     }

@@ -22,7 +22,7 @@ func (s *Server) registerPublicRoutes(r *gin.Engine) {
 func (s *Server) registerAPIRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	{
-		api.GET("/info/:shortCode", s.Handlers.Redirect.GetURLInfo)
+		api.GET("/info/:shortUrl", s.Handlers.Redirect.GetURLInfo)
 		s.registerProtectedAPIRoutes(api)
 	}
 }
@@ -36,5 +36,5 @@ func (s *Server) registerProtectedAPIRoutes(rg *gin.RouterGroup) {
 }
 
 func (s *Server) registerRedirectRoutes(r *gin.Engine) {
-	r.GET("/r/:shortCode", s.Handlers.Redirect.Redirect)
+	r.GET("/r/:shortUrl", s.Handlers.Redirect.Redirect)
 }

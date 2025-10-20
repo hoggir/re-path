@@ -85,7 +85,7 @@ paths:
       summary: Get dashboard statistics
       tags:
       - Dashboard
-  /api/info/{shortCode}:
+  /api/info/{shortUrl}:
     get:
       parameters:
       - description: Short Code
@@ -120,15 +120,15 @@ paths:
       summary: Health check
       tags:
       - Health
-  /r/{shortCode}:
+  /r/{shortUrl}:
     get:
       consumes:
       - application/json
       description: Returns the original URL information without performing a redirect
       parameters:
-      - description: Short Code
+      - description: Short Url
         in: path
-        name: shortCode
+        name: shortUrl
         required: true
         type: string
       produces:
@@ -147,7 +147,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: Get original URL from short code
+      summary: Get original URL from short url
       tags:
       - Redirect
 schemes:
