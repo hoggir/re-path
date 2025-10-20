@@ -1,70 +1,108 @@
-"""Health check endpoints."""
+"""Dashboard endpoints."""
 
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, Query, status
+from datetime import datetime, timedelta
 
-from app.schemas.dashboard import DashboardData
+from app.models.click_event import ClickEvent
+from app.schemas.dashboard import (
+    ClickEventsDashboard,
+    ClickEventsStats,
+)
 from app.schemas.response import ApiResponse, create_response
-from app.services.opensearch_service import OpenSearchService
 
 router = APIRouter(tags=["Dashboard"])
 logger = logging.getLogger(__name__)
 
 
 @router.get(
-    "/dashboard",
-    response_model=ApiResponse[DashboardData],
+    "/dashboard/clicks",
+    response_model=ApiResponse[ClickEventsDashboard],
     status_code=status.HTTP_200_OK,
-    summary="Dashboard",
-    description="Dashboard endpoint",
-    responses={
-        200: {
-            "description": "Data retrieved successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "success": True,
-                        "message": "Data retrieved successfully",
-                        "data": {
-                            "status": "healthy",
-                        },
-                        "meta": {
-                            "timestamp": "2025-10-14T10:30:00Z",
-                            "version": "v1",
-                            "request_id": None,
-                        },
-                    }
-                }
-            },
-        }
-    },
+    summary="Get Click Events Dashboard",
+    description="Retrieve click events from MongoDB with statistics and filtering",
 )
-async def first_dashboard(
-    # request: SearchRequest,
-) -> ApiResponse[DashboardData]:
-    response = await OpenSearchService.search_all(
-        index_type="click_events",
-        query={"match": {"short_code": "my-custom-link"}},
-        from_=0,
-    )
+async def get_click_events_dashboard(
+    short_code: Optional[str] = Query(None, description="Filter by short code"),
+) -> ApiResponse[ClickEventsDashboard]:
+    try:
+        query_filter = {}
+        if short_code:
+            query_filter["shortCode"] = short_code
 
-    # first_short_code = response["hits"]
-    hits = response.get("hits", {})
-    # total_data = hits.get{"value", 0}
-    total_data = hits.get("total", {}).get("value", 0)
+        total_clicks = await ClickEvent.find(query_filter).count()
+        bot_clicks = await ClickEvent.find({**query_filter, "isBot": True}).count()
+        human_clicks = total_clicks - bot_clicks
 
-    # short_codes = [hit["_source"]]
-    print(hits)
-    print(total_data)
+        country_stats = []
+        # Fallback: fetch all and count manually
+        all_events_for_countries = await ClickEvent.find(query_filter).to_list()
+        events_as_dict = [event.dict() for event in all_events_for_countries]
+        print(events_as_dict)
+        country_counts = {}
+        for event in all_events_for_countries:
+            if event.country_code:
+                country_counts[event.country_code] = country_counts.get(event.country_code, 0) + 1
+        unique_countries = len(country_counts)
+        # Convert to CountryClickStats and sort by click count
+        # country_stats = [
+        #     CountryClickStats(country_code=code, click_count=count)
+        #     for code, count in sorted(
+        #         country_counts.items(), key=lambda x: x[1], reverse=True
+        #     )
+        # ]
 
-    # logger.info("Data", response)
-    # logger.info(f"✅ Data : {response}, ")
-    dashboard_data = DashboardData(
-        status="healthy",
-    )
+        events = [
+            {
+                **e.dict(),
+                "clicked_at": e.clicked_at.strftime("%d-%m-%Y"),
+                "clicked_date": e.clicked_at.date()  # simpan juga tanggal untuk filter mudah
+            }
+            for e in all_events_for_countries
+        ]
+        # Get country-based click statistics using aggregation
+        # dapatkan rentang tanggal dari tanggal 1 bulan ini sampai hari ini
+        today = datetime.now().date()
+        start_date = today.replace(day=1)
 
-    return create_response(
-        data=dashboard_data,
-        message="Data retrieved successfully",
-    )
+        current_date = start_date
+        while current_date <= today:
+            # filter event sesuai tanggal loop
+            events_on_date = [ev for ev in events if ev["clicked_date"] == current_date]
+
+            print(f"Tanggal: {current_date} — Jumlah klik: {len(events_on_date)}")
+            # kalau mau lihat detail event:
+            # for ev in events_on_date:
+            #     print(ev)
+
+            # lanjut ke tanggal berikutnya
+            current_date += timedelta(days=1)
+
+        stats = ClickEventsStats(
+            total_clicks=total_clicks,
+            unique_visitors=666,
+            unique_countries=unique_countries,
+            bot_clicks=bot_clicks,
+            human_clicks=human_clicks,
+        )
+
+        # Create dashboard response
+        dashboard = ClickEventsDashboard(
+            short_code=short_code,
+            stats=stats,
+        )
+
+        return create_response(
+            data=dashboard,
+            message=f"Found {total_clicks} click event(s)"
+            + (f" for short code '{short_code}'" if short_code else ""),
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving click events: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve click events: {str(e)}",
+        ) from e

@@ -1,26 +1,22 @@
-"""Dashboard check schemas."""
+"""Dashboard schemas."""
 
-from typing import Literal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
-class DashboardData(BaseModel):
-    """Dashboard check data schema (used inside ApiResponse)."""
+class ClickEventsStats(BaseModel):
+    """Click events statistics schema."""
 
-    status: Literal["healthy", "unhealthy"] = Field(
-        description="Service health status",
-        examples=["healthy"],
-    )
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "status": "healthy",
-            }
-        }
-    }
+    total_clicks: int = Field(description="Total number of clicks")
+    unique_visitors: int = Field(description="Number of unique visitors")
+    unique_countries: int = Field(description="Number of unique countries")
+    bot_clicks: int = Field(description="Number of bot clicks")
+    human_clicks: int = Field(description="Number of human clicks")
 
 
-# Backward compatibility - keep old name as alias
-DashboardResponse = DashboardData
+class ClickEventsDashboard(BaseModel):
+    """Dashboard response with click events."""
+
+    short_code: Optional[str] = Field(default=None, description="Filter by short code")
+    stats: ClickEventsStats = Field(description="Click events statistics")

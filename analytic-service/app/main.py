@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
-from app.api.v1 import analytics, dashboard, health
+from app.api.v1 import dashboard, health
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.exceptions import (
@@ -20,7 +20,6 @@ from app.core.exceptions import (
     generic_exception_handler,
     validation_exception_handler,
 )
-from app.core.opensearch import OpenSearchManager
 from app.core.rabbitmq import RabbitMQConsumerManager
 from app.models import ALL_MODELS
 from app.services.message_handler import create_message_handler
@@ -57,13 +56,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"⚠️  Failed to connect to MongoDB: {e}")
         print("⚠️  Service will continue without database connection")
 
-    # Connect to OpenSearch
-    try:
-        await OpenSearchManager.connect_to_opensearch()
-    except Exception as e:
-        print(f"⚠️  Failed to connect to OpenSearch: {e}")
-        print("⚠️  Service will continue without OpenSearch connection")
-
     # Start RabbitMQ Consumer
     try:
         await RabbitMQConsumerManager.start_consumer(create_message_handler)
@@ -77,7 +69,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print(f"👋 Shutting down {settings.app_name}")
     await RabbitMQConsumerManager.stop_consumer()
     await DatabaseManager.close_database_connection()
-    await OpenSearchManager.close_opensearch_connection()
 
 
 # Initialize FastAPI application
@@ -108,7 +99,6 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include routers
 app.include_router(health.router, prefix=settings.api_v1_prefix)
-app.include_router(analytics.router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
 
 
