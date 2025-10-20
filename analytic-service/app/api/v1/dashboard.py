@@ -1,10 +1,10 @@
 """Dashboard endpoints."""
 
 import logging
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
-from datetime import datetime, timedelta
 
 from app.models.click_event import ClickEvent
 from app.schemas.dashboard import (
@@ -36,7 +36,6 @@ async def get_click_events_dashboard(
         bot_clicks = await ClickEvent.find({**query_filter, "isBot": True}).count()
         human_clicks = total_clicks - bot_clicks
 
-        country_stats = []
         # Fallback: fetch all and count manually
         all_events_for_countries = await ClickEvent.find(query_filter).to_list()
         events_as_dict = [event.dict() for event in all_events_for_countries]

@@ -1,5 +1,17 @@
 basePath: /
 definitions:
+  dto.DashboardResponse:
+    properties:
+      total_click:
+        example: 333
+        type: integer
+      total_link:
+        example: 666
+        type: integer
+      unique_visitors:
+        example: 123
+        type: integer
+    type: object
   dto.HealthResponse:
     properties:
       service:
@@ -43,6 +55,36 @@ info:
   title: Re:Path Redirect Service API
   version: "1.0"
 paths:
+  /api/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Get dashboard statistics (requires authentication)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get dashboard statistics
+      tags:
+      - Dashboard
   /api/info/{shortCode}:
     get:
       parameters:
@@ -110,5 +152,10 @@ paths:
       - Redirect
 schemes:
 - http
-- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

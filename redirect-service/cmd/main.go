@@ -25,7 +25,12 @@ import (
 // @host      localhost:3011
 // @BasePath  /
 
-// @schemes   http https
+// @schemes   http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	srv, err := InitializeApp()
@@ -55,6 +60,7 @@ func main() {
 	serverErrors := make(chan error, 1)
 
 	go func() {
+		log.Printf("📚 Swagger service starting on http://localhost:%s/swagger/index.html", port)
 		log.Printf("🚀 Redirect service starting on port %s...", port)
 		serverErrors <- httpServer.ListenAndServe()
 	}()

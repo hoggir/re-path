@@ -40,6 +40,12 @@ func InitializeApp() (*server.Server, error) {
 	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, rabbitMQService)
 	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService)
 	healthHandler := handler.NewHealthHandler()
-	serverServer := server.New(configConfig, redirectHandler, healthHandler, mongoDB, redis)
+	rabbitMQRPCService := service.NewRabbitMQRPCService(rabbitMQ)
+	dashboardService := service.NewDashboardService(rabbitMQRPCService, configConfig)
+	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+	handlers := server.NewHandlers(redirectHandler, healthHandler, dashboardHandler)
+	jwtService := service.NewJWTService(configConfig)
+	middlewares := server.NewMiddlewares(configConfig, jwtService)
+	serverServer := server.New(configConfig, handlers, middlewares, mongoDB, redis)
 	return serverServer, nil
 }

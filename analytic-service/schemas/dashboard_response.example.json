@@ -1,0 +1,29 @@
+{
+  "user_id": 1,
+  "total_clicks": 1542,
+  "total_links": 45,
+  "recent_clicks": [
+    {
+      "short_code": "my-link",
+      "clicked_at": "2025-10-20T10:00:00Z",
+      "ip_address_hash": "abc123hash",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "country_code": "ID",
+      "city": "Jakarta",
+      "device_type": "desktop",
+      "browser_name": "Chrome",
+      "is_bot": false
+    }
+  ],
+  "top_links": [
+    {
+      "short_code": "popular-link",
+      "clicks": 350
+    },
+    {
+      "short_code": "second-link",
+      "clicks": 280
+    }
+  ],
+  "status": "success"
+}

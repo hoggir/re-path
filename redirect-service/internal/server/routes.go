@@ -9,14 +9,32 @@ import (
 )
 
 func (s *Server) registerRoutes(r *gin.Engine) {
+	s.registerPublicRoutes(r)
+	s.registerAPIRoutes(r)
+	s.registerRedirectRoutes(r)
+}
+
+func (s *Server) registerPublicRoutes(r *gin.Engine) {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/health", s.Handlers.Health.Health)
+}
 
-	r.GET("/health", s.HealthHandler.Health)
-
+func (s *Server) registerAPIRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	{
-		api.GET("/info/:shortCode", s.RedirectHandler.GetURLInfo)
+		api.GET("/info/:shortCode", s.Handlers.Redirect.GetURLInfo)
+		s.registerProtectedAPIRoutes(api)
 	}
+}
 
-	r.GET("/r/:shortCode", s.RedirectHandler.Redirect)
+func (s *Server) registerProtectedAPIRoutes(rg *gin.RouterGroup) {
+	protected := rg.Group("")
+	protected.Use(s.Middlewares.Auth)
+	{
+		protected.GET("/dashboard", s.Handlers.Dashboard.GetDashboardByShortUrl)
+	}
+}
+
+func (s *Server) registerRedirectRoutes(r *gin.Engine) {
+	r.GET("/r/:shortCode", s.Handlers.Redirect.Redirect)
 }

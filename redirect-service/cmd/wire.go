@@ -27,12 +27,18 @@ func InitializeApp() (*server.Server, error) {
 		service.NewCacheService,
 		service.NewGeoIPService,
 		service.NewRabbitMQService,
+		service.NewRabbitMQRPCService,
 		service.NewRedirectService,
 		service.NewClickEventService,
+		service.NewDashboardService,
+		service.NewJWTService,
 
 		handler.NewRedirectHandler,
 		handler.NewHealthHandler,
+		handler.NewDashboardHandler,
 
+		server.NewHandlers,
+		server.NewMiddlewares,
 		server.New,
 	)
 	return nil, nil

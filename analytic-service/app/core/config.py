@@ -74,6 +74,10 @@ class Settings(BaseSettings):
         default="analytics.click",
         description="RabbitMQ routing key",
     )
+    rabbitmq_rpc_queue: str = Field(
+        default="dashboard_request",
+        description="RabbitMQ RPC queue name for dashboard requests",
+    )
 
     @property
     def is_production(self) -> bool:

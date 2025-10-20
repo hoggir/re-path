@@ -1,0 +1,9 @@
+{
+  "user_id": 1,
+  "status": "error",
+  "message": "Database connection failed",
+  "total_clicks": 0,
+  "total_links": 0,
+  "recent_clicks": [],
+  "top_links": []
+}

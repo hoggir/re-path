@@ -16,6 +16,7 @@ type Config struct {
 	RabbitMQ RabbitMQConfig
 	Server   ServerConfig
 	CORS     CORSConfig
+	JWT      JWTConfig
 }
 
 type AppConfig struct {
@@ -44,7 +45,8 @@ type RabbitMQConfig struct {
 }
 
 type QueueConfig struct {
-	ClickEvents string
+	ClickEvents      string
+	DashboardRequest string
 }
 
 type ServerConfig struct {
@@ -56,6 +58,12 @@ type CORSConfig struct {
 	AllowOrigins string
 	AllowMethods string
 	AllowHeaders string
+}
+
+type JWTConfig struct {
+	Secret     string
+	Expiration time.Duration
+	Issuer     string
 }
 
 func Load() *Config {
@@ -84,7 +92,8 @@ func Load() *Config {
 		RabbitMQ: RabbitMQConfig{
 			URL: getEnv("RABBITMQ_URL", "amqp://repath:repath123@localhost:5672/repath"),
 			Queues: QueueConfig{
-				ClickEvents: getEnv("QUEUE_CLICK_EVENTS", "click_events"),
+				ClickEvents:      getEnv("QUEUE_CLICK_EVENTS", "click_events"),
+				DashboardRequest: getEnv("QUEUE_DASHBOARD_REQUEST", "dashboard_request"),
 			},
 		},
 		Server: ServerConfig{
@@ -95,6 +104,11 @@ func Load() *Config {
 			AllowOrigins: getEnv("CORS_ALLOW_ORIGINS", "*"),
 			AllowMethods: getEnv("CORS_ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS"),
 			AllowHeaders: getEnv("CORS_ALLOW_HEADERS", "Origin,Content-Type,Accept,Authorization"),
+		},
+		JWT: JWTConfig{
+			Secret:     getEnv("JWT_SECRET", "your-256-bit-secret-change-this-in-production"),
+			Expiration: time.Duration(getEnvAsInt("JWT_EXPIRATION_HOURS", 24)) * time.Hour,
+			Issuer:     getEnv("JWT_ISSUER", "re-path-redirect-service"),
 		},
 	}
 }

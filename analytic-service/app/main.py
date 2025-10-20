@@ -21,7 +21,9 @@ from app.core.exceptions import (
     validation_exception_handler,
 )
 from app.core.rabbitmq import RabbitMQConsumerManager
+from app.core.rabbitmq_rpc import RabbitMQRPCConsumerManager
 from app.models import ALL_MODELS
+from app.services.dashboard_service import handle_dashboard_rpc_request
 from app.services.message_handler import create_message_handler
 
 # Configure logging
@@ -56,18 +58,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"⚠️  Failed to connect to MongoDB: {e}")
         print("⚠️  Service will continue without database connection")
 
-    # Start RabbitMQ Consumer
+    # Start RabbitMQ Consumer for click events
     try:
         await RabbitMQConsumerManager.start_consumer(create_message_handler)
     except Exception as e:
         print(f"⚠️  Failed to start RabbitMQ consumer: {e}")
         print("⚠️  Service will continue without RabbitMQ consumer")
 
+    # Start RabbitMQ RPC Consumer for dashboard requests
+    try:
+        await RabbitMQRPCConsumerManager.start_consumer(handle_dashboard_rpc_request)
+    except Exception as e:
+        print(f"⚠️  Failed to start RabbitMQ RPC consumer: {e}")
+        print("⚠️  Service will continue without RabbitMQ RPC consumer")
+
     yield
 
     # Shutdown
     print(f"👋 Shutting down {settings.app_name}")
     await RabbitMQConsumerManager.stop_consumer()
+    await RabbitMQRPCConsumerManager.stop_consumer()
     await DatabaseManager.close_database_connection()
 
 

@@ -30,6 +30,7 @@ func NewRabbitMQ(cfg *config.Config) (*RabbitMQ, error) {
 
 	queues := []string{
 		cfg.RabbitMQ.Queues.ClickEvents,
+		cfg.RabbitMQ.Queues.DashboardRequest,
 	}
 
 	for _, queueName := range queues {
