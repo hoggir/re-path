@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
-from app.api.v1 import dashboard, health
+from app.api.v1 import health
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.exceptions import (
@@ -109,7 +109,6 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include routers
 app.include_router(health.router, prefix=settings.api_v1_prefix)
-app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/", include_in_schema=False)

@@ -29,6 +29,7 @@ type URLMetadata struct {
 type FindByShortCode struct {
 	OriginalURL string     `bson:"originalUrl" json:"originalUrl"`
 	IsActive    bool       `bson:"isActive" json:"isActive"`
+	UserID      int        `bson:"userId" json:"userId"`
 	ExpiresAt   *time.Time `bson:"expiresAt,omitempty" json:"expiresAt,omitempty"`
 }
 

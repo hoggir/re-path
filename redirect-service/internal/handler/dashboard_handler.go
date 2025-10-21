@@ -33,7 +33,6 @@ func NewDashboardHandler(dashboardService service.DashboardService) *DashboardHa
 func (d *DashboardHandler) GetDashboardByShortUrl(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	// Get typed dashboard data with validation
 	dashboardData, err := d.dashboardService.GetDashboard(c.Request.Context(), userID.(int))
 	if err != nil {
 		fmt.Printf("❌ Error getting dashboard: %v\n", err)
@@ -41,14 +40,14 @@ func (d *DashboardHandler) GetDashboardByShortUrl(c *gin.Context) {
 		return
 	}
 
-	// Map typed response to DTO
 	response := dto.DashboardResponse{
-		TotalLink:      dashboardData.TotalLinks,
-		TotalClick:     dashboardData.TotalClicks,
-		UniqueVisitors: len(dashboardData.RecentClicks), // Or calculate from data
+		TotalLink:    dashboardData.TotalLinks,
+		TotalClick:   dashboardData.TotalClicks,
+		UniqVisitors: dashboardData.UniqVisitors,
+		TopLinks:     dashboardData.TopLinks,
+		StatLinks:    dashboardData.StatLinks,
 	}
 
-	// Log if response is limited
 	if dashboardData.IsLimited() {
 		fmt.Printf("⚠️ Dashboard data is limited: %s\n", dashboardData.GetMessage())
 	}

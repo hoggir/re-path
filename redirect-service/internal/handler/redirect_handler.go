@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoggir/re-path/redirect-service/internal/dto"
@@ -49,7 +50,6 @@ func (h *RedirectHandler) Redirect(c *gin.Context) {
 	if err != nil {
 		log.Printf("❌ Failed to get URL for shortUrl %s: %v", shortUrl, err)
 
-		// Handle specific errors dengan HTTP status yang sesuai
 		if errors.Is(err, repository.ErrURLExpired) {
 			dto.ErrorResponse(c, http.StatusGone, err.Error(), nil) // 410 Gone
 			return
@@ -68,11 +68,8 @@ func (h *RedirectHandler) Redirect(c *gin.Context) {
 	}
 
 	go func() {
-		ctx := context.Background()
-
-		if err := h.redirectService.IncrementClickCount(ctx, shortUrl); err != nil {
-			log.Printf("⚠️  Failed to increment click count for shortUrl %s: %v", shortUrl, err)
-		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
 		if err := h.clickEventService.TrackClick(ctx, c, shortUrl); err != nil {
 			log.Printf("⚠️  Failed to track click for shortUrl %s: %v", shortUrl, err)
@@ -103,7 +100,6 @@ func (h *RedirectHandler) GetURLInfo(c *gin.Context) {
 
 	url, err := h.redirectService.GetURL(c.Request.Context(), shortCode)
 	if err != nil {
-		// Handle specific errors dengan HTTP status yang sesuai
 		if errors.Is(err, repository.ErrURLExpired) {
 			dto.ErrorResponse(c, http.StatusGone, err.Error(), nil) // 410 Gone
 			return
@@ -117,15 +113,12 @@ func (h *RedirectHandler) GetURLInfo(c *gin.Context) {
 			return
 		}
 
-		// Generic error
 		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve URL", nil)
 		return
 	}
 
 	response := dto.RedirectResponse{
-		// ShortCode:   url.ShortCode,
 		OriginalURL: url.OriginalURL,
-		// ClickCount:  url.ClickCount,
 	}
 
 	dto.SuccessResponse(c, http.StatusOK, "URL info retrieved successfully", response)

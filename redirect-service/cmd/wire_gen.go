@@ -32,16 +32,15 @@ func InitializeApp() (*server.Server, error) {
 	redirectService := service.NewRedirectService(urlRepository, cacheService, configConfig)
 	clickEventRepository := repository.NewClickEventRepository(mongoDB)
 	geoIPService := service.NewGeoIPService(cacheService, configConfig)
+	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, redirectService)
 	rabbitMQ, err := database.NewRabbitMQ(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	rabbitMQService := service.NewRabbitMQService(rabbitMQ)
-	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, rabbitMQService)
-	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService)
-	healthHandler := handler.NewHealthHandler()
 	rabbitMQRPCService := service.NewRabbitMQRPCService(rabbitMQ)
-	dashboardService := service.NewDashboardService(rabbitMQRPCService, configConfig)
+	dashboardService := service.NewDashboardService(rabbitMQRPCService, cacheService, configConfig)
+	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService, dashboardService)
+	healthHandler := handler.NewHealthHandler()
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	handlers := server.NewHandlers(redirectHandler, healthHandler, dashboardHandler)
 	jwtService := service.NewJWTService(configConfig)

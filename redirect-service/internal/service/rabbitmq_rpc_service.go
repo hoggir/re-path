@@ -85,13 +85,10 @@ func (s *rabbitMQRPCService) Call(ctx context.Context, queueName string, payload
 
 	log.Printf("📤 RPC Request sent to queue '%s' (correlation_id: %s)", queueName, correlationID)
 
-	// Wait for response with timeout
 	select {
 	case msg := <-msgs:
 		if msg.CorrelationId == correlationID {
-			log.Printf("📥 RPC Response received from queue '%s' (correlation_id: %s, size: %d bytes)",
-				queueName, correlationID, len(msg.Body))
-			log.Printf("📦 Response body: %s", string(msg.Body))
+			// log.Printf("📦 Response body: %s", string(msg.Body))
 			return msg.Body, nil
 		}
 		return nil, fmt.Errorf("received message with mismatched correlation ID")

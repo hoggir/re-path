@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/hoggir/re-path/redirect-service/internal/config"
@@ -15,19 +16,29 @@ type DashboardService interface {
 }
 
 type dashboardService struct {
-	rpcService RabbitMQRPCService
-	config     *config.Config
+	rpcService   RabbitMQRPCService
+	cacheService CacheService
+	config       *config.Config
 }
 
-func NewDashboardService(rpcService RabbitMQRPCService, cfg *config.Config) DashboardService {
+func NewDashboardService(rpcService RabbitMQRPCService, cacheService CacheService, cfg *config.Config) DashboardService {
 	return &dashboardService{
-		rpcService: rpcService,
-		config:     cfg,
+		rpcService:   rpcService,
+		cacheService: cacheService,
+		config:       cfg,
 	}
 }
 
 func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domain.DashboardResponse, error) {
-	// Create and validate request
+	cacheKey := fmt.Sprintf("dashboard:%d", userId)
+
+	var cachedResponse domain.DashboardResponse
+	if err := s.cacheService.Get(ctx, cacheKey, &cachedResponse); err == nil {
+		log.Printf("⚡ Cache HIT for dashboard: %d", userId)
+		s.cacheService.RefreshTTL(ctx, cacheKey, s.config.Redis.CacheTTL)
+		return &cachedResponse, nil
+	}
+
 	request := domain.DashboardRequest{
 		UserID: userId,
 	}
@@ -36,7 +47,6 @@ func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domai
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
 
-	// Make RPC call
 	response, err := s.rpcService.Call(
 		ctx,
 		s.config.RabbitMQ.Queues.DashboardRequest,
@@ -47,20 +57,17 @@ func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domai
 		return nil, fmt.Errorf("failed to get dashboard data: %w", err)
 	}
 
-	// Parse response into typed struct
 	var result domain.DashboardResponse
 	if err := json.Unmarshal(response, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse dashboard response: %w", err)
 	}
 
-	// Validate response
-	if err := result.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid response from analytic service: %w", err)
-	}
-
-	// Check response status
 	if result.IsError() {
 		return nil, fmt.Errorf("dashboard service error: %s", result.GetMessage())
+	}
+
+	if err := s.cacheService.Set(ctx, cacheKey, result, s.config.Redis.CacheTTL); err != nil {
+		log.Printf("⚠️  Failed to cache dashboard: %d: %v", userId, err)
 	}
 
 	return &result, nil

@@ -1,11 +1,13 @@
 import logging
+from collections import Counter
 from typing import Any
 
 from pydantic import ValidationError
 
 from app.core.database import DatabaseManager
 from app.models.click_event import ClickEvent
-from app.schemas.rpc_contracts import (
+from app.models.url import URL
+from app.schemas.dashboard import (
     create_dashboard_error_response,
     create_dashboard_response,
     validate_dashboard_request,
@@ -26,31 +28,56 @@ class DashboardService:
                     user_id=user_id,
                     total_clicks=0,
                     total_links=0,
-                    recent_clicks=[],
                     top_links=[],
                     status="limited",
                     message="Database not available",
                 )
 
             try:
-                # total_clicks = await ClickEvent.find(query_filter).count()
-                total_clicks = 123
-                total_links = 45
-                recent_clicks = []
-                top_links = []
-                
+                user_links = await URL.find({"userId": user_id}).to_list()
+                total_links = len(user_links)
 
-                logger.info(
-                    f"✅ Dashboard data retrieved - user_id: {user_id}, "
-                    f"clicks: {total_clicks}, links: {total_links}"
-                )
+                short_codes = [link.short_code for link in user_links]
+                if short_codes:
+                    click_events = await ClickEvent.find(
+                        {"shortCode": {"$in": short_codes}}
+                    ).to_list()
+
+                    total_clicks = len(click_events)
+                    uniq_visitors = len({click.ip_address_hash for click in click_events})
+
+                    counter = Counter(
+                        event.clicked_at.strftime("%-d %b")
+                        for event in click_events
+                    )
+
+                    data_stat = [
+                        {"date": date, "clicks": count} for date, count in sorted(counter.items())
+                    ]
+
+                    sorted_links = sorted(user_links, key=lambda x: x.click_count, reverse=True)
+                    top_links = [
+                        {
+                            "short_url": link.short_code,
+                            "original_url": link.original_url,
+                            "clicks": link.click_count,
+                            "status": link.is_active,
+                        }
+                        for link in sorted_links[:5]  # Top 5 links
+                    ]
+                else:
+                    data_stat = []
+                    top_links = []
+                    uniq_visitors = 0
+                    total_clicks = 0
 
                 return create_dashboard_response(
                     user_id=user_id,
                     total_clicks=total_clicks,
                     total_links=total_links,
-                    recent_clicks=recent_clicks,
                     top_links=top_links,
+                    stat_links=data_stat,
+                    uniq_visitors=uniq_visitors,
                     status="success",
                 )
 

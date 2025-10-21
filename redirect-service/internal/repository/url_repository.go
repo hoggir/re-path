@@ -43,7 +43,7 @@ func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (
 		"shortCode": shortCode,
 	}
 
-	err := r.collection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"originalUrl": 1, "isActive": 1, "expiresAt": 1, "_id": 0})).Decode(&url)
+	err := r.collection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"userId": 1, "originalUrl": 1, "isActive": 1, "expiresAt": 1, "_id": 0})).Decode(&url)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, ErrURLNotFound

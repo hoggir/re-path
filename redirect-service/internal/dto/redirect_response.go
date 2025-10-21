@@ -2,12 +2,10 @@ package dto
 
 import "time"
 
-// RedirectResponse represents the response when getting a shortened URL
 type RedirectResponse struct {
 	OriginalURL string `json:"originalUrl" example:"https://example.com"`
 }
 
-// URLInfoResponse represents detailed URL information
 type URLInfoResponse struct {
 	ShortCode   string     `json:"shortCode" example:"abc123"`
 	OriginalURL string     `json:"originalUrl" example:"https://example.com"`

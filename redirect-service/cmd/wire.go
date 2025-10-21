@@ -26,7 +26,6 @@ func InitializeApp() (*server.Server, error) {
 
 		service.NewCacheService,
 		service.NewGeoIPService,
-		service.NewRabbitMQService,
 		service.NewRabbitMQRPCService,
 		service.NewRedirectService,
 		service.NewClickEventService,

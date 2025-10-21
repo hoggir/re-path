@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"log"
 	"strings"
 	"time"
@@ -22,18 +21,18 @@ type ClickEventService interface {
 type clickEventService struct {
 	clickEventRepo  repository.ClickEventRepository
 	geoIPService    GeoIPService
-	rabbitmqService RabbitMQService
+	redirectService RedirectService
 }
 
 func NewClickEventService(
 	clickEventRepo repository.ClickEventRepository,
 	geoIPService GeoIPService,
-	rabbitmqService RabbitMQService,
+	redirectService RedirectService,
 ) ClickEventService {
 	return &clickEventService{
 		clickEventRepo:  clickEventRepo,
 		geoIPService:    geoIPService,
-		rabbitmqService: rabbitmqService,
+		redirectService: redirectService,
 	}
 }
 
@@ -43,6 +42,10 @@ func (s *clickEventService) TrackClick(ctx context.Context, ginCtx *gin.Context,
 	clientIP := ginCtx.ClientIP()
 	log.Printf("📍 Tracking click from IP: %s", clientIP)
 
+	if err := s.redirectService.IncrementClickCount(ctx, shortCode); err != nil {
+		log.Printf("⚠️  Failed to increment click count for shortCode %s: %v", shortCode, err)
+	}
+
 	ipHash := hashIPAddress(clientIP)
 
 	deviceType := getDeviceType(ua)
@@ -50,8 +53,8 @@ func (s *clickEventService) TrackClick(ctx context.Context, ginCtx *gin.Context,
 	referrer := ginCtx.Request.Referer()
 	referrerDomain := extractDomain(referrer)
 
-	// geoLocation, err := s.geoIPService.GetLocation(ctx, clientIP)
-	geoLocation, err := s.geoIPService.GetLocation(ctx, "203.175.11.126")
+	geoLocation, err := s.geoIPService.GetLocation(ctx, clientIP)
+	// geoLocation, err := s.geoIPService.GetLocation(ctx, "203.175.11.126")
 	if err != nil {
 		log.Printf("⚠️  Failed to get geolocation for IP %s: %v", clientIP, err)
 	}
@@ -83,59 +86,6 @@ func (s *clickEventService) TrackClick(ctx context.Context, ginCtx *gin.Context,
 		log.Printf("⚠️  Failed to track click event for shortCode %s: %v", shortCode, err)
 		return nil
 	}
-
-	payloadElastic := domain.PayloadElasticClick{
-		IndexType: "click_events",
-		Data: domain.ClickData{
-			ShortCode: shortCode,
-			Metadata: domain.ClickMetaData{
-				ClickedAt: newDate,
-				IsBot:     ua.Bot,
-				Client: domain.ClientInfo{
-					IPHash: ipHash,
-					Geo: domain.GeoInfo{
-						CountryISOCode: clickEvent.CountryCode,
-						RegionName:     clickEvent.Region,
-						City:           clickEvent.City,
-						Location: domain.GeoLocationElastic{
-							Lat: clickEvent.Lat,
-							Lon: clickEvent.Lon,
-						},
-					},
-				},
-				HTTP: domain.HTTPInfo{
-					Referrer:       referrer,
-					ReferrerDomain: referrerDomain,
-				},
-				UserAgent: domain.UserAgentInfo{
-					Original: ginCtx.Request.UserAgent(),
-					Device: domain.DeviceInfo{
-						Name: deviceType,
-					},
-					Browser: domain.BrowserInfo{
-						Name:    ua.Name,
-						Version: ua.Version,
-					},
-					OS: domain.OSInfo{
-						Name:    ua.OS,
-						Version: ua.OSVersion,
-					},
-				},
-			},
-		},
-	}
-
-	jsonPayload, err := json.Marshal(payloadElastic)
-	if err != nil {
-		log.Printf("⚠️  Failed to marshal click event payload for shortCode %s: %v", shortCode, err)
-		return nil
-	}
-
-	go func() {
-		if err := s.rabbitmqService.PublishClickEvent(context.Background(), jsonPayload); err != nil {
-			log.Printf("⚠️  Failed to publish click event to RabbitMQ for shortCode %s: %v", shortCode, err)
-		}
-	}()
 
 	return nil
 }

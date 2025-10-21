@@ -39,8 +39,10 @@ func (s *redirectService) GetURL(ctx context.Context, shortCode string) (*domain
 	var url domain.FindByShortCode
 	err := s.cacheService.Get(ctx, cacheKey, &url)
 	if err == nil {
+		dashboardCacheKey := fmt.Sprintf("dashboard:%d", url.UserID)
 		log.Printf("⚡ Cache HIT for shortCode: %s", shortCode)
 		s.cacheService.RefreshTTL(ctx, cacheKey, s.config.Redis.CacheTTL)
+		s.cacheService.Delete(ctx, dashboardCacheKey)
 		return &url, nil
 	}
 
@@ -52,6 +54,9 @@ func (s *redirectService) GetURL(ctx context.Context, shortCode string) (*domain
 	if err := s.cacheService.Set(ctx, cacheKey, urlData, s.config.Redis.CacheTTL); err != nil {
 		log.Printf("⚠️  Failed to cache shortCode %s: %v", shortCode, err)
 	}
+
+	dashboardCacheKey := fmt.Sprintf("dashboard:%d", url.UserID)
+	s.cacheService.Delete(ctx, dashboardCacheKey)
 
 	return urlData, nil
 }

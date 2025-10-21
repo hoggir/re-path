@@ -83,7 +83,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Short Code",
+                        "description": "Short Url",
                         "name": "shortCode",
                         "in": "path",
                         "required": true
@@ -185,9 +185,49 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.StatLink": {
+            "type": "object",
+            "properties": {
+                "clicks": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TopLink": {
+            "type": "object",
+            "properties": {
+                "clicks": {
+                    "type": "integer"
+                },
+                "original_url": {
+                    "type": "string"
+                },
+                "short_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "boolean"
+                }
+            }
+        },
         "dto.DashboardResponse": {
             "type": "object",
             "properties": {
+                "stat_links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.StatLink"
+                    }
+                },
+                "top_links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TopLink"
+                    }
+                },
                 "total_click": {
                     "type": "integer",
                     "example": 333
@@ -196,9 +236,9 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 666
                 },
-                "unique_visitors": {
+                "uniq_visitors": {
                     "type": "integer",
-                    "example": 123
+                    "example": 2
                 }
             }
         },
