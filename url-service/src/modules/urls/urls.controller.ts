@@ -1,10 +1,9 @@
 import {
   Body,
   Controller,
-  HttpCode,
+  Get,
   HttpStatus,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -13,13 +12,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { UrlResponseDto } from './dto/urls-response.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UrlService } from './urls.service';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 
 @ApiTags('URL Shortener')
 @Controller('url')
@@ -27,9 +26,9 @@ import { UrlService } from './urls.service';
 export class UrlController {
   constructor(private readonly urlService: UrlService) {}
 
-  @Roles('user')
   @Post('create')
-  @UseGuards(JwtAuthGuard)
+  @Roles('user', 'admin')
+  @ResponseMessage('URL shortened successfully')
   @ApiBody({ type: CreateUrlDto })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -50,11 +49,21 @@ export class UrlController {
     @Body() createUrlDto: CreateUrlDto,
     @CurrentUser('userId') userId: number,
   ) {
-    const url = await this.urlService.createShortUrl(createUrlDto, userId);
+    return this.urlService.createShortUrl(createUrlDto, userId);
+  }
 
-    return {
-      message: 'URL shortened successfully',
-      data: url,
-    };
+  @Get('metrics/collisions')
+  @Roles('admin')
+  @ResponseMessage('Collision metrics retrieved successfully')
+  @ApiOperation({
+    summary: 'Get short code collision metrics',
+    description: 'Monitor collision rate for short code generation (admin only)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Collision metrics retrieved successfully',
+  })
+  async getCollisionMetrics() {
+    return this.urlService.getCollisionMetrics();
   }
 }

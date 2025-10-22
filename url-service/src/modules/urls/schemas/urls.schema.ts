@@ -1,20 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { BaseSchema } from '../../../database/schemas/base.schema';
-import { Types } from 'mongoose';
 
 @Schema({ collection: 'urls', timestamps: true })
 export class Url extends BaseSchema {
   @Prop({ required: true, type: String })
   originalUrl: string;
 
-  @Prop({ required: true, unique: false, index: true, type: String })
+  @Prop({ required: true, unique: true, sparse: true, type: String })
   shortCode: string;
 
   @Prop({ type: String })
   customAlias?: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', index: true })
-  userId?: Types.ObjectId;
+  @Prop({ type: Number, required: true, index: true })
+  userId: number;
 
   @Prop({ default: 0, type: Number })
   clickCount: number;
@@ -63,8 +62,7 @@ export class Url extends BaseSchema {
 
 export const UrlSchema = SchemaFactory.createForClass(Url);
 
-// Indexes for better performance
-UrlSchema.index({ shortCode: 1 });
+UrlSchema.index({ shortCode: 1, isDeleted: 1 }, { unique: true, sparse: true });
 UrlSchema.index({ userId: 1, createdAt: -1 });
 UrlSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 UrlSchema.index({ isActive: 1 });

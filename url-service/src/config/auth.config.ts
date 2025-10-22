@@ -10,11 +10,4 @@ export default registerAs('auth', () => ({
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS as string, 10) || 10,
   },
-  password: {
-    minLength: 8,
-    requireUppercase: true,
-    requireLowercase: true,
-    requireNumbers: true,
-    requireSpecialChars: true,
-  },
 }));

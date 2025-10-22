@@ -42,17 +42,14 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     return {
-      message: 'Registration successful',
-      data: {
-        user: {
-          id: this.idEncryptionService.encryptId(user.id),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
-        },
-        ...tokens,
+      user: {
+        id: this.idEncryptionService.encryptId(user.id),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
       },
+      ...tokens,
     };
   }
 
@@ -62,7 +59,7 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email not found');
     }
 
     if (!user.isActive) {
@@ -75,7 +72,7 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Password is incorrect');
     }
 
     const tokens = await this.generateTokens(user);
@@ -86,18 +83,15 @@ export class AuthService {
     ]);
 
     return {
-      message: 'Login successful',
-      data: {
-        user: {
-          id: this.idEncryptionService.encryptId(user.id),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
-          lastLoginAt: new Date(),
-        },
-        ...tokens,
+      user: {
+        id: this.idEncryptionService.encryptId(user.id),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        lastLoginAt: new Date(),
       },
+      ...tokens,
     };
   }
 
@@ -123,10 +117,7 @@ export class AuthService {
 
       await this.updateRefreshToken(user.id, tokens.refreshToken);
 
-      return {
-        message: 'Token refreshed successfully',
-        data: tokens,
-      };
+      return tokens;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -137,10 +128,7 @@ export class AuthService {
 
     await this.redisService.del(`user:${userId}`);
 
-    return {
-      message: 'Logout successful',
-      data: null,
-    };
+    return null;
   }
 
   async validateUser(userId: number): Promise<User> {

@@ -1,16 +1,15 @@
-import { Controller, Get, UseGuards, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpStatus } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -18,6 +17,7 @@ import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 export class UsersController {
   @Public()
   @Get('public')
+  @ResponseMessage('Public endpoint accessed')
   @ApiOperation({
     summary: 'Public endpoint',
     description: 'This endpoint is accessible without authentication',
@@ -45,7 +45,7 @@ export class UsersController {
   }
 
   @Get('profile')
-  @UseGuards(JwtAuthGuard)
+  @ResponseMessage('Profile retrieved')
   @ApiOperation({
     summary: 'Get user profile',
     description: 'Retrieve the profile of the authenticated user',
@@ -77,18 +77,15 @@ export class UsersController {
   })
   getProfile(@CurrentUser() user: any) {
     return {
-      message: 'Profile retrieved',
-      data: {
-        userId: user.encryptedUserId,
-        email: user.email,
-        role: user.role,
-      },
+      userId: user.encryptedUserId,
+      email: user.email,
+      role: user.role,
     };
   }
 
-  @Roles('admin')
   @Get('admin')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ResponseMessage('Admin access granted')
   @ApiOperation({
     summary: 'Admin only endpoint',
     description: 'This endpoint is only accessible by users with admin role',
@@ -125,18 +122,15 @@ export class UsersController {
   })
   adminOnly(@CurrentUser() user: any) {
     return {
-      message: 'Admin access',
-      data: {
-        userId: user.encryptedUserId,
-        email: user.email,
-        role: user.role,
-      },
+      userId: user.encryptedUserId,
+      email: user.email,
+      role: user.role,
     };
   }
 
-  @Roles('admin', 'moderator')
   @Get('moderator')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'moderator')
+  @ResponseMessage('Moderator access granted')
   @ApiOperation({
     summary: 'Moderator or Admin endpoint',
     description:
@@ -157,6 +151,6 @@ export class UsersController {
     type: ErrorResponseDto,
   })
   moderatorAccess() {
-    return { message: 'Moderator or Admin access' };
+    return { access: 'Moderator or Admin' };
   }
 }

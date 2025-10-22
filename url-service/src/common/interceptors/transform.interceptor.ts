@@ -4,13 +4,15 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator';
 
 export interface Response<T> {
   success: boolean;
   statusCode: number;
-  message?: string;
+  message: string;
   data: T;
   timestamp: string;
 }
@@ -19,6 +21,8 @@ export interface Response<T> {
 export class TransformInterceptor<T>
   implements NestInterceptor<T, Response<T>>
 {
+  constructor(private reflector: Reflector) {}
+
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -26,12 +30,18 @@ export class TransformInterceptor<T>
     const ctx = context.switchToHttp();
     const response = ctx.getResponse();
 
+    // Get custom message from @ResponseMessage() decorator
+    const customMessage = this.reflector.get<string>(
+      RESPONSE_MESSAGE_KEY,
+      context.getHandler(),
+    );
+
     return next.handle().pipe(
       map((data) => ({
         success: true,
         statusCode: response.statusCode,
-        message: data?.message || 'Success',
-        data: data?.data !== undefined ? data.data : data,
+        message: customMessage || 'Success',
+        data: data,
         timestamp: new Date().toISOString(),
       })),
     );

@@ -9,16 +9,9 @@ import { UsersModule } from '../users/users.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { APP_GUARD } from '@nestjs/core';
-import authConfig from 'src/config/auth.config';
-import { IdEncryptionService } from '../../common/utils/id-encryption.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [authConfig],
-      envFilePath: ['.env.local', '.env'],
-    }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -34,7 +27,6 @@ import { IdEncryptionService } from '../../common/utils/id-encryption.service';
   ],
   controllers: [AuthController],
   providers: [
-    IdEncryptionService,
     AuthService,
     JwtStrategy,
     {

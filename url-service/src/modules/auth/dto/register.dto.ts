@@ -4,9 +4,9 @@ import {
   IsString,
   MinLength,
   MaxLength,
-  Matches,
   IsNotEmpty,
 } from 'class-validator';
+import { IsStrongPassword } from '../../../common/validators/is-strong-password.validator';
 
 export class RegisterDto {
   @ApiProperty({
@@ -32,17 +32,20 @@ export class RegisterDto {
 
   @ApiProperty({
     description:
-      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character',
-    example: 'Password123!',
+      'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number, one special character, and no whitespace',
+    example: 'SecurePass123!',
     minLength: 8,
     format: 'password',
   })
   @IsNotEmpty({ message: 'Password is required' })
-  @IsString()
-  @MinLength(8, { message: 'Password must be at least 8 characters' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message:
-      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character',
+  @IsString({ message: 'Password must be a string' })
+  @IsStrongPassword({
+    minLength: 8,
+    requireUppercase: true,
+    requireLowercase: true,
+    requireNumbers: true,
+    requireSpecialChars: true,
+    allowWhitespace: false,
   })
   password: string;
 }

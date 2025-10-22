@@ -7,7 +7,9 @@ export class IdEncryptionService {
   private hashids: Hashids;
 
   constructor(private readonly configService: ConfigService) {
-    const salt = this.configService.get<string>('ID_ENCRYPTION_SALT') || 'default-salt-change-in-production';
+    const salt =
+      this.configService.get<string>('ID_ENCRYPTION_SALT') ||
+      'default-salt-change-in-production';
     const minLength = 8;
     this.hashids = new Hashids(salt, minLength);
   }
@@ -31,7 +33,7 @@ export class IdEncryptionService {
    * Encrypt multiple IDs
    */
   encryptIds(ids: number[]): string[] {
-    return ids.map(id => this.encryptId(id));
+    return ids.map((id) => this.encryptId(id));
   }
 
   /**
@@ -39,7 +41,7 @@ export class IdEncryptionService {
    */
   decryptIds(encryptedIds: string[]): number[] {
     return encryptedIds
-      .map(id => this.decryptId(id))
+      .map((id) => this.decryptId(id))
       .filter((id): id is number => id !== null);
   }
 }

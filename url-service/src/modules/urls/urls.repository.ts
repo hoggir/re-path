@@ -23,30 +23,4 @@ export class UrlRepository extends BaseRepository<Url> {
       })
       .exec();
   }
-
-  async findByOriginalUrl(
-    originalUrl: string,
-    userId?: number,
-  ): Promise<Url | null> {
-    const query: any = { originalUrl, isDeleted: false };
-    if (userId) {
-      query.userId = userId;
-    }
-    return this.urlModel.findOne(query).exec();
-  }
-
-  async findByCustomAlias(customAlias: string): Promise<Url | null> {
-    return this.urlModel.findOne({ customAlias, isDeleted: false }).exec();
-  }
-
-  async checkShortCodeExists(shortCode: string): Promise<boolean> {
-    return this.exists({ shortCode });
-  }
-
-  async checkCustomAliasExists(customAlias: string): Promise<boolean> {
-    const count = await this.urlModel
-      .countDocuments({ shortCode: customAlias, isDeleted: false })
-      .exec();
-    return count > 0;
-  }
 }

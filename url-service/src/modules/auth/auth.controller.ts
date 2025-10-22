@@ -28,7 +28,7 @@ import {
 } from '../../common/dto/error-response.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -38,6 +38,7 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @ResponseMessage('Registration successful')
   @ApiOperation({
     summary: 'Register a new user',
     description:
@@ -66,6 +67,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Login successful')
   @ApiOperation({
     summary: 'Login user',
     description:
@@ -94,6 +96,7 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Token refreshed successfully')
   @ApiOperation({
     summary: 'Refresh access token',
     description:
@@ -119,10 +122,10 @@ export class AuthController {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
+  @ResponseMessage('Logout successful')
   @ApiOperation({
     summary: 'Logout user',
     description: 'Invalidate refresh token and logout the current user.',
@@ -141,10 +144,10 @@ export class AuthController {
     return this.authService.logout(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('me')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
+  @ResponseMessage('Profile retrieved successfully')
   @ApiOperation({
     summary: 'Get current user profile',
     description: 'Retrieve the profile information of the authenticated user.',
@@ -175,9 +178,6 @@ export class AuthController {
     type: ErrorResponseDto,
   })
   async getProfile(@CurrentUser() user: any) {
-    return {
-      message: 'Profile retrieved successfully',
-      data: user,
-    };
+    return user;
   }
 }

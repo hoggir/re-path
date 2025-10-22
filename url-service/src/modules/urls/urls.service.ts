@@ -13,140 +13,211 @@ import { UrlRepository } from './urls.repository';
 export class UrlService {
   private readonly shortCodeLength: number;
   private readonly maxRetries: number;
+  private readonly baseRetryDelayMs: number;
+  private collisionCount: number = 0;
 
   constructor(
     private readonly urlRepository: UrlRepository,
     private readonly configService: ConfigService,
   ) {
     this.shortCodeLength = 6;
-    this.maxRetries = 5;
+    this.maxRetries = 10;
+    this.baseRetryDelayMs = 10;
   }
 
   async createShortUrl(
     createUrlDto: CreateUrlDto,
     userId: number,
   ): Promise<Url> {
-    try {
-      const normalizedUrl = this.normalizeUrl(createUrlDto.originalUrl);
+    const normalizedUrl = this.normalizeUrl(createUrlDto.originalUrl);
 
-      if (createUrlDto.customAlias) {
-        const aliasExists = await this.urlRepository.checkCustomAliasExists(
-          createUrlDto.customAlias,
-        );
-        if (aliasExists) {
-          throw new BadRequestException('Custom alias already exists');
-        }
-      }
+    if (createUrlDto.customAlias) {
+      return this.createWithCustomAlias(createUrlDto, normalizedUrl, userId);
+    }
 
-      const shortCode =
-        createUrlDto.customAlias || (await this.generateShortCode());
-      const urlObj = new URL(normalizedUrl);
-      const metadata = {
+    return this.createWithGeneratedShortCode(
+      createUrlDto,
+      normalizedUrl,
+      userId,
+    );
+  }
+
+  private async createWithCustomAlias(
+    createUrlDto: CreateUrlDto,
+    normalizedUrl: string,
+    userId: number,
+  ): Promise<Url> {
+    const urlObj = new URL(normalizedUrl);
+    const urlData: Partial<Url> = {
+      originalUrl: normalizedUrl,
+      shortCode: createUrlDto.customAlias!,
+      customAlias: createUrlDto.customAlias,
+      userId: userId,
+      title: createUrlDto.title,
+      description: createUrlDto.description,
+      expiresAt: new Date(
+        Date.now() +
+          this.configService.get('url.defaultTtlDays', 7) * 24 * 60 * 60 * 1000,
+      ),
+      metadata: {
         domain: urlObj.hostname,
         protocol: urlObj.protocol,
         path: urlObj.pathname,
-      };
+      },
+      clickCount: 0,
+      isActive: true,
+    };
 
-      const urlData: Partial<Url> = {
-        originalUrl: normalizedUrl,
-        shortCode,
-        customAlias: createUrlDto.customAlias,
-        userId: userId as any,
-        title: createUrlDto.title,
-        description: createUrlDto.description,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        metadata,
-        clickCount: 0,
-        isActive: true,
-      };
-
+    try {
       const createdUrl = await this.urlRepository.create(urlData);
       return createdUrl;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 11000 || error.message?.includes('duplicate')) {
+        throw new BadRequestException('Custom alias already exists');
+      }
       throw error;
     }
   }
 
-  private async generateShortCode(): Promise<string> {
+  private async createWithGeneratedShortCode(
+    createUrlDto: CreateUrlDto,
+    normalizedUrl: string,
+    userId: number,
+  ): Promise<Url> {
+    const urlObj = new URL(normalizedUrl);
+    const baseUrlData: Partial<Url> = {
+      originalUrl: normalizedUrl,
+      customAlias: createUrlDto.customAlias,
+      userId: userId,
+      title: createUrlDto.title,
+      description: createUrlDto.description,
+      expiresAt: new Date(
+        Date.now() +
+          this.configService.get('url.defaultTtlDays', 7) * 24 * 60 * 60 * 1000,
+      ),
+      metadata: {
+        domain: urlObj.hostname,
+        protocol: urlObj.protocol,
+        path: urlObj.pathname,
+      },
+      clickCount: 0,
+      isActive: true,
+    };
+
     let attempts = 0;
+    let currentLength = this.shortCodeLength;
 
     while (attempts < this.maxRetries) {
-      let shortCode: string;
+      const shortCode = this.generateShortCodeByStrategy(
+        attempts,
+        currentLength,
+      );
 
-      switch (attempts) {
-        case 0:
-          shortCode = this.generateBase62ShortCode(this.shortCodeLength);
-          break;
-        case 1:
-          shortCode = this.generateCryptoShortCode(this.shortCodeLength);
-          break;
-        case 2:
-          shortCode = this.generateTimestampBasedCode(this.shortCodeLength);
-          break;
-        case 3:
-          shortCode = this.generateUuidBasedCode(this.shortCodeLength);
-          break;
-        default:
-          shortCode = this.generateBase62ShortCode(
-            this.shortCodeLength + attempts - 3,
+      try {
+        const createdUrl = await this.urlRepository.create({
+          ...baseUrlData,
+          shortCode,
+        });
+
+        if (attempts > 0) {
+          console.warn(
+            `✅ Short code generated after ${attempts + 1} attempts (collision detected)`,
           );
-          break;
+          this.collisionCount += attempts;
+        }
+
+        return createdUrl;
+      } catch (error: any) {
+        const isDuplicateError =
+          error.code === 11000 || error.message?.includes('duplicate');
+
+        if (!isDuplicateError) {
+          throw error;
+        }
+
+        attempts++;
+
+        if (attempts % 3 === 0) {
+          currentLength++;
+        }
+
+        if (attempts <= 3) {
+          console.warn(
+            `⚠️  Short code collision detected (attempt ${attempts}/${this.maxRetries})`,
+          );
+        }
+
+        if (attempts < this.maxRetries) {
+          await this.exponentialBackoff(attempts);
+        }
       }
-
-      const exists = await this.urlRepository.checkShortCodeExists(shortCode);
-
-      if (!exists) {
-        return shortCode;
-      }
-
-      attempts++;
     }
 
+    console.error(
+      `❌ Failed to generate unique short code after ${this.maxRetries} attempts`,
+    );
     throw new BadRequestException(
-      'Failed to generate unique short code. Please try again.',
+      'Unable to generate unique short code. Please try again later.',
     );
   }
 
-  // Strategy 1: Base62 encoding (0-9, a-z, A-Z)
-  private generateBase62ShortCode(length: number): string {
-    const chars =
-      '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-
-    for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * chars.length);
-      result += chars[randomIndex];
+  private generateShortCodeByStrategy(attempt: number, length: number): string {
+    switch (attempt % 4) {
+      case 0:
+        return this.generateCryptoShortCode(length);
+      case 1:
+        return this.generateUuidBasedCode(length);
+      case 2:
+        return this.generateTimestampBasedCode(length);
+      case 3:
+        return this.generateCryptoShortCode(length); // Use crypto again (most secure)
+      default:
+        return this.generateCryptoShortCode(length);
     }
-
-    return result;
   }
 
-  // Strategy 2: Crypto-based random generation
+  private async exponentialBackoff(attempt: number): Promise<void> {
+    const delay = this.baseRetryDelayMs * Math.pow(2, attempt);
+
+    const jitter = Math.random() * delay * 0.5;
+    const totalDelay = delay + jitter;
+
+    const cappedDelay = Math.min(totalDelay, 500);
+
+    await new Promise((resolve) => setTimeout(resolve, cappedDelay));
+  }
+
   private generateCryptoShortCode(length: number): string {
     const chars =
       '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const randomBytes = crypto.randomBytes(length);
+    const randomBytes = crypto.randomBytes(length * 2);
     let result = '';
 
     for (let i = 0; i < length; i++) {
-      result += chars[randomBytes[i] % chars.length];
+      const randomValue = randomBytes.readUInt16BE(i * 2);
+      result += chars[randomValue % chars.length];
     }
 
     return result;
   }
 
-  // Strategy 3: Timestamp-based with random suffix
   private generateTimestampBasedCode(length: number): string {
     const timestamp = Date.now().toString(36);
-    const randomSuffix = this.generateBase62ShortCode(
+    const randomBytes = crypto.randomBytes(
       Math.max(1, length - timestamp.length),
     );
-    const combined = timestamp + randomSuffix;
+    const chars =
+      '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    return combined.slice(-length); // Take last 'length' characters
+    let randomSuffix = '';
+    for (let i = 0; i < randomBytes.length; i++) {
+      randomSuffix += chars[randomBytes[i] % chars.length];
+    }
+
+    const combined = timestamp + randomSuffix;
+    return combined.slice(-length);
   }
 
-  // Strategy 4: UUID-based short code
   private generateUuidBasedCode(length: number): string {
     const uuid = crypto.randomUUID().replace(/-/g, '');
     const hash = crypto.createHash('sha256').update(uuid).digest('base64url');
@@ -168,67 +239,9 @@ export class UrlService {
     }
   }
 
-  /**
-   * Get original URL by short code
-   */
-  async getOriginalUrl(shortCode: string): Promise<Url> {
-    const url = await this.urlRepository.findByShortCode(shortCode);
-
-    if (!url) {
-      throw new NotFoundException('Short URL not found or expired');
-    }
-
-    return url;
-  }
-
-  /**
-   * Track click and redirect
-   */
-  async trackAndRedirect(shortCode: string): Promise<string> {
-    const url = await this.getOriginalUrl(shortCode);
-
-    return url.originalUrl;
-  }
-
-  /**
-   * Get URL statistics
-   */
-  async getUrlStats(shortCode: string, userId?: number): Promise<any> {
-    const url = await this.urlRepository.findByShortCode(shortCode);
-
-    if (!url) {
-      throw new NotFoundException('Short URL not found');
-    }
-
-    if (userId && url.userId?.toString() !== userId.toString()) {
-      throw new BadRequestException(
-        'You do not have access to this URL statistics',
-      );
-    }
-
-    // Calculate analytics
-    // const analytics = url.analytics || [];
-    // const clicksByDay = this.groupClicksByDay(analytics);
-    // const topReferers = this.getTopReferers(analytics);
-    // const topCountries = this.getTopCountries(analytics);
-
+  getCollisionMetrics(): { totalCollisions: number } {
     return {
-      url: {
-        id: url.id,
-        originalUrl: url.originalUrl,
-        shortCode: url.shortCode,
-        shortUrl: 'url.shortUrl',
-        title: url.title,
-        createdAt: url.createdAt,
-      },
-      statistics: {
-        totalClicks: url.clickCount,
-        // clicksByDay,
-        // topReferers,
-        // topCountries,
-        // lastClickedAt: analytics[analytics.length - 1]?.clickedAt || null,
-      },
-      // recentClicks: analytics.slice(-10).reverse(),
+      totalCollisions: this.collisionCount,
     };
   }
 }
