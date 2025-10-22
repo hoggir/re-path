@@ -36,7 +36,7 @@ func (d *DashboardHandler) GetDashboardByShortUrl(c *gin.Context) {
 	dashboardData, err := d.dashboardService.GetDashboard(c.Request.Context(), userID.(int))
 	if err != nil {
 		fmt.Printf("❌ Error getting dashboard: %v\n", err)
-		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve dashboard", err.Error())
+		dto.HandleError(c, err)
 		return
 	}
 

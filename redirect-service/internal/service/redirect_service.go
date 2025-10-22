@@ -2,11 +2,10 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
 
 	"github.com/hoggir/re-path/redirect-service/internal/config"
 	"github.com/hoggir/re-path/redirect-service/internal/domain"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"github.com/hoggir/re-path/redirect-service/internal/repository"
 )
 
@@ -18,31 +17,37 @@ type RedirectService interface {
 type redirectService struct {
 	urlRepo      repository.URLRepository
 	cacheService CacheService
+	cacheKeys    *CacheKeyGenerator
 	config       *config.Config
+	logger       logger.Logger
 }
 
 func NewRedirectService(
 	urlRepo repository.URLRepository,
 	cacheService CacheService,
+	cacheKeys *CacheKeyGenerator,
 	cfg *config.Config,
+	log logger.Logger,
 ) RedirectService {
 	return &redirectService{
 		urlRepo:      urlRepo,
 		cacheService: cacheService,
+		cacheKeys:    cacheKeys,
 		config:       cfg,
+		logger:       log,
 	}
 }
 
 func (s *redirectService) GetURL(ctx context.Context, shortCode string) (*domain.FindByShortCode, error) {
-	cacheKey := fmt.Sprintf("url:%s", shortCode)
+	cacheKey := s.cacheKeys.URL(shortCode)
 
 	var url domain.FindByShortCode
 	err := s.cacheService.Get(ctx, cacheKey, &url)
 	if err == nil {
-		dashboardCacheKey := fmt.Sprintf("dashboard:%d", url.UserID)
-		log.Printf("⚡ Cache HIT for shortCode: %s", shortCode)
+		dashboardInvalidFlag := s.cacheKeys.DashboardInvalidationFlag(url.UserID)
+		s.logger.DebugContext(ctx, "cache hit for shortCode", "shortCode", shortCode)
 		s.cacheService.RefreshTTL(ctx, cacheKey, s.config.Redis.CacheTTL)
-		s.cacheService.Delete(ctx, dashboardCacheKey)
+		s.cacheService.SetInvalidationFlag(ctx, dashboardInvalidFlag, s.config.Redis.InvalidationFlagTTL)
 		return &url, nil
 	}
 
@@ -52,11 +57,11 @@ func (s *redirectService) GetURL(ctx context.Context, shortCode string) (*domain
 	}
 
 	if err := s.cacheService.Set(ctx, cacheKey, urlData, s.config.Redis.CacheTTL); err != nil {
-		log.Printf("⚠️  Failed to cache shortCode %s: %v", shortCode, err)
+		s.logger.WarnContext(ctx, "failed to cache shortCode", "shortCode", shortCode, "error", err)
 	}
 
-	dashboardCacheKey := fmt.Sprintf("dashboard:%d", url.UserID)
-	s.cacheService.Delete(ctx, dashboardCacheKey)
+	dashboardInvalidFlag := s.cacheKeys.DashboardInvalidationFlag(urlData.UserID)
+	s.cacheService.SetInvalidationFlag(ctx, dashboardInvalidFlag, s.config.Redis.InvalidationFlagTTL)
 
 	return urlData, nil
 }

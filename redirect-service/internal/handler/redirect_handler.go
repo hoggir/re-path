@@ -2,29 +2,34 @@ package handler
 
 import (
 	"context"
-	"errors"
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hoggir/re-path/redirect-service/internal/config"
+	"github.com/hoggir/re-path/redirect-service/internal/domain"
 	"github.com/hoggir/re-path/redirect-service/internal/dto"
-	"github.com/hoggir/re-path/redirect-service/internal/repository"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"github.com/hoggir/re-path/redirect-service/internal/service"
 )
 
 type RedirectHandler struct {
 	redirectService   service.RedirectService
 	clickEventService service.ClickEventService
+	config            *config.Config
+	logger            logger.Logger
 }
 
 func NewRedirectHandler(
 	redirectService service.RedirectService,
 	clickEventService service.ClickEventService,
+	cfg *config.Config,
+	log logger.Logger,
 ) *RedirectHandler {
 	return &RedirectHandler{
 		redirectService:   redirectService,
 		clickEventService: clickEventService,
+		config:            cfg,
+		logger:            log,
 	}
 }
 
@@ -42,37 +47,35 @@ func (h *RedirectHandler) Redirect(c *gin.Context) {
 	shortUrl := c.Param("shortUrl")
 
 	if shortUrl == "" {
-		dto.ErrorResponse(c, http.StatusBadRequest, "Short url is required", nil)
+		dto.HandleError(c, domain.ErrMissingRequired.WithContext("field",
+			"shortUrl"))
+		return
+	}
+	if len(shortUrl) > 50 {
+		dto.HandleError(c, domain.ErrInvalidInput.WithContext("field",
+			"shortUrl").WithMessage("Short URL too long"))
 		return
 	}
 
 	url, err := h.redirectService.GetURL(c.Request.Context(), shortUrl)
 	if err != nil {
-		log.Printf("❌ Failed to get URL for shortUrl %s: %v", shortUrl, err)
-
-		if errors.Is(err, repository.ErrURLExpired) {
-			dto.ErrorResponse(c, http.StatusGone, err.Error(), nil) // 410 Gone
-			return
-		}
-		if errors.Is(err, repository.ErrURLInactive) {
-			dto.ErrorResponse(c, http.StatusForbidden, err.Error(), nil) // 403 Forbidden
-			return
-		}
-		if errors.Is(err, repository.ErrURLNotFound) {
-			dto.ErrorResponse(c, http.StatusNotFound, err.Error(), nil) // 404 Not Found
-			return
-		}
-
-		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve URL", nil)
+		h.logger.ErrorContext(c.Request.Context(), "failed to get URL", "shortUrl", shortUrl, "error", err)
+		dto.HandleError(c, err)
 		return
 	}
 
+	metadata := domain.ClickMetadata{
+		ClientIP:  c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		Referrer:  c.Request.Referer(),
+	}
+
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), h.config.Service.ClickTrackingTimeout)
 		defer cancel()
 
-		if err := h.clickEventService.TrackClick(ctx, c, shortUrl); err != nil {
-			log.Printf("⚠️  Failed to track click for shortUrl %s: %v", shortUrl, err)
+		if err := h.clickEventService.TrackClick(ctx, metadata, shortUrl); err != nil {
+			h.logger.WarnContext(ctx, "failed to track click", "shortUrl", shortUrl, "error", err)
 		}
 	}()
 
@@ -94,26 +97,13 @@ func (h *RedirectHandler) GetURLInfo(c *gin.Context) {
 	shortCode := c.Param("shortCode")
 
 	if shortCode == "" {
-		dto.ErrorResponse(c, http.StatusBadRequest, "Short code is required", nil)
+		dto.HandleError(c, domain.ErrMissingRequired.WithContext("field", "shortCode"))
 		return
 	}
 
 	url, err := h.redirectService.GetURL(c.Request.Context(), shortCode)
 	if err != nil {
-		if errors.Is(err, repository.ErrURLExpired) {
-			dto.ErrorResponse(c, http.StatusGone, err.Error(), nil) // 410 Gone
-			return
-		}
-		if errors.Is(err, repository.ErrURLInactive) {
-			dto.ErrorResponse(c, http.StatusForbidden, err.Error(), nil) // 403 Forbidden
-			return
-		}
-		if errors.Is(err, repository.ErrURLNotFound) {
-			dto.ErrorResponse(c, http.StatusNotFound, err.Error(), nil) // 404 Not Found
-			return
-		}
-
-		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve URL", nil)
+		dto.HandleError(c, err)
 		return
 	}
 

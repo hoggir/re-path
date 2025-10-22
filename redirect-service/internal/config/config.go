@@ -17,6 +17,7 @@ type Config struct {
 	Server   ServerConfig
 	CORS     CORSConfig
 	JWT      JWTConfig
+	Service  ServiceConfig
 }
 
 type AppConfig struct {
@@ -26,22 +27,32 @@ type AppConfig struct {
 }
 
 type MongoDBConfig struct {
-	URI      string
-	Database string
-	Timeout  time.Duration
+	URI            string
+	Database       string
+	ConnTimeout    time.Duration
+	QueryTimeout   time.Duration
+	MaxPoolSize    uint64
+	MinPoolSize    uint64
+	DisconnTimeout time.Duration
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
-	CacheTTL time.Duration
+	Host                    string
+	Port                    string
+	Password                string
+	DB                      int
+	CacheTTL                time.Duration
+	InvalidationFlagTTL     time.Duration
+	ConnTimeout             time.Duration
+	MaxRetries              int
+	PoolSize                int
+	MinIdleConns            int
 }
 
 type RabbitMQConfig struct {
-	URL    string
-	Queues QueueConfig
+	URL        string
+	Queues     QueueConfig
+	RPCTimeout time.Duration
 }
 
 type QueueConfig struct {
@@ -66,9 +77,20 @@ type JWTConfig struct {
 	Issuer     string
 }
 
+type ServiceConfig struct {
+	ClickTrackingTimeout time.Duration
+	GeoIPTimeout         time.Duration
+	ExternalAPITimeout   time.Duration
+}
+
 func Load() *Config {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
+	}
+
+	secret := getEnv("JWT_SECRET", "")
+	if secret == "" {
+		log.Fatal("JWT_SECRET must be set in environment variables")
 	}
 
 	return &Config{
@@ -78,19 +100,29 @@ func Load() *Config {
 			Name: getEnv("APP_NAME", "redirect-service"),
 		},
 		MongoDB: MongoDBConfig{
-			URI:      getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-			Database: getEnv("MONGODB_DATABASE", "repath"),
-			Timeout:  time.Duration(getEnvAsInt("MONGODB_TIMEOUT", 10)) * time.Second,
+			URI:            getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+			Database:       getEnv("MONGODB_DATABASE", "repath"),
+			ConnTimeout:    time.Duration(getEnvAsInt("MONGODB_CONN_TIMEOUT", 10)) * time.Second,
+			QueryTimeout:   time.Duration(getEnvAsInt("MONGODB_QUERY_TIMEOUT", 5)) * time.Second,
+			MaxPoolSize:    uint64(getEnvAsInt("MONGODB_MAX_POOL_SIZE", 100)),
+			MinPoolSize:    uint64(getEnvAsInt("MONGODB_MIN_POOL_SIZE", 10)),
+			DisconnTimeout: time.Duration(getEnvAsInt("MONGODB_DISCONN_TIMEOUT", 10)) * time.Second,
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
-			CacheTTL: time.Duration(getEnvAsInt("REDIS_CACHE_TTL", 3600)) * time.Second,
+			Host:                getEnv("REDIS_HOST", "localhost"),
+			Port:                getEnv("REDIS_PORT", "6379"),
+			Password:            getEnv("REDIS_PASSWORD", ""),
+			DB:                  getEnvAsInt("REDIS_DB", 0),
+			CacheTTL:            time.Duration(getEnvAsInt("REDIS_CACHE_TTL", 300)) * time.Second,
+			InvalidationFlagTTL: time.Duration(getEnvAsInt("REDIS_INVALIDATION_FLAG_TTL", 30)) * time.Second,
+			ConnTimeout:         time.Duration(getEnvAsInt("REDIS_CONN_TIMEOUT", 5)) * time.Second,
+			MaxRetries:          getEnvAsInt("REDIS_MAX_RETRIES", 3),
+			PoolSize:            getEnvAsInt("REDIS_POOL_SIZE", 10),
+			MinIdleConns:        getEnvAsInt("REDIS_MIN_IDLE_CONNS", 5),
 		},
 		RabbitMQ: RabbitMQConfig{
-			URL: getEnv("RABBITMQ_URL", "amqp://repath:repath123@localhost:5672/repath"),
+			URL:        getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+			RPCTimeout: time.Duration(getEnvAsInt("RABBITMQ_RPC_TIMEOUT", 5)) * time.Second,
 			Queues: QueueConfig{
 				ClickEvents:      getEnv("QUEUE_CLICK_EVENTS", "click_events"),
 				DashboardRequest: getEnv("QUEUE_DASHBOARD_REQUEST", "dashboard_request"),
@@ -109,6 +141,11 @@ func Load() *Config {
 			Secret:     getEnv("JWT_SECRET", "your-256-bit-secret-change-this-in-production"),
 			Expiration: time.Duration(getEnvAsInt("JWT_EXPIRATION_HOURS", 24)) * time.Hour,
 			Issuer:     getEnv("JWT_ISSUER", "re-path-redirect-service"),
+		},
+		Service: ServiceConfig{
+			ClickTrackingTimeout: time.Duration(getEnvAsInt("SERVICE_CLICK_TRACKING_TIMEOUT", 5)) * time.Second,
+			GeoIPTimeout:         time.Duration(getEnvAsInt("SERVICE_GEOIP_TIMEOUT", 3)) * time.Second,
+			ExternalAPITimeout:   time.Duration(getEnvAsInt("SERVICE_EXTERNAL_API_TIMEOUT", 10)) * time.Second,
 		},
 	}
 }

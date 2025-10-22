@@ -3,9 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/hoggir/re-path/redirect-service/internal/config"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -14,16 +14,18 @@ import (
 type MongoDB struct {
 	Client   *mongo.Client
 	Database *mongo.Database
+	logger   logger.Logger
 }
 
-func NewMongoDB(cfg *config.Config) (*MongoDB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.MongoDB.Timeout)
+func NewMongoDB(cfg *config.Config, log logger.Logger) (*MongoDB, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.MongoDB.ConnTimeout)
 	defer cancel()
 
 	clientOptions := options.Client().
 		ApplyURI(cfg.MongoDB.URI).
-		SetMaxPoolSize(100).
-		SetMinPoolSize(10)
+		SetMaxPoolSize(cfg.MongoDB.MaxPoolSize).
+		SetMinPoolSize(cfg.MongoDB.MinPoolSize).
+		SetTimeout(cfg.MongoDB.QueryTimeout)
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -36,24 +38,29 @@ func NewMongoDB(cfg *config.Config) (*MongoDB, error) {
 
 	database := client.Database(cfg.MongoDB.Database)
 
-	log.Printf("✅ MongoDB connected successfully to database: %s", cfg.MongoDB.Database)
+	log.Info("MongoDB connected successfully",
+		"database", cfg.MongoDB.Database,
+		"minPoolSize", cfg.MongoDB.MinPoolSize,
+		"maxPoolSize", cfg.MongoDB.MaxPoolSize,
+		"queryTimeout", cfg.MongoDB.QueryTimeout)
 
 	return &MongoDB{
 		Client:   client,
 		Database: database,
+		logger:   log,
 	}, nil
 }
 
-func (m *MongoDB) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10)
+func (m *MongoDB) Close(cfg *config.Config) error {
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.MongoDB.DisconnTimeout)
 	defer cancel()
 
-	log.Println("🔌 Closing MongoDB connection...")
+	m.logger.Info("closing MongoDB connection")
 	if err := m.Client.Disconnect(ctx); err != nil {
 		return fmt.Errorf("failed to disconnect from mongodb: %w", err)
 	}
 
-	log.Println("✅ MongoDB connection closed successfully")
+	m.logger.Info("MongoDB connection closed successfully")
 	return nil
 }
 

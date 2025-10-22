@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hoggir/re-path/redirect-service/internal/database"
@@ -32,7 +31,10 @@ func (r *clickEventRepository) Create(ctx context.Context, clickEvent *domain.Cl
 
 	_, err := r.collection.InsertOne(ctx, clickEvent)
 	if err != nil {
-		return fmt.Errorf("failed to create click event: %w", err)
+		return domain.ErrDatabaseError.
+			WithContext("shortCode", clickEvent.ShortCode).
+			WithContext("operation", "CreateClickEvent").
+			Wrap(err)
 	}
 
 	return nil

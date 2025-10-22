@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/hoggir/re-path/redirect-service/internal/database"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -18,11 +18,13 @@ type RabbitMQRPCService interface {
 
 type rabbitMQRPCService struct {
 	rabbitmq *database.RabbitMQ
+	logger   logger.Logger
 }
 
-func NewRabbitMQRPCService(rabbitmq *database.RabbitMQ) RabbitMQRPCService {
+func NewRabbitMQRPCService(rabbitmq *database.RabbitMQ, log logger.Logger) RabbitMQRPCService {
 	return &rabbitMQRPCService{
 		rabbitmq: rabbitmq,
+		logger:   log,
 	}
 }
 
@@ -83,7 +85,7 @@ func (s *rabbitMQRPCService) Call(ctx context.Context, queueName string, payload
 		return nil, fmt.Errorf("failed to publish RPC request: %w", err)
 	}
 
-	log.Printf("📤 RPC Request sent to queue '%s' (correlation_id: %s)", queueName, correlationID)
+	s.logger.DebugContext(ctx, "RPC request sent", "queue", queueName, "correlationId", correlationID)
 
 	select {
 	case msg := <-msgs:

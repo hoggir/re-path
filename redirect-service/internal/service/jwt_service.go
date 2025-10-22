@@ -6,12 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hoggir/re-path/redirect-service/internal/config"
-)
-
-var (
-	ErrInvalidToken      = errors.New("invalid token")
-	ErrExpiredToken      = errors.New("token has expired")
-	ErrInvalidSigningKey = errors.New("invalid signing key")
+	"github.com/hoggir/re-path/redirect-service/internal/domain"
 )
 
 type JWTService interface {
@@ -65,21 +60,21 @@ func NewJWTService(cfg *config.Config) JWTService {
 func (s *jwtService) ValidateToken(tokenString string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, ErrInvalidSigningKey
+			return nil, domain.ErrInvalidSigningKey
 		}
 		return []byte(s.config.JWT.Secret), nil
 	})
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrExpiredToken
+			return nil, domain.ErrTokenExpired.Wrap(err)
 		}
-		return nil, ErrInvalidToken
+		return nil, domain.ErrInvalidToken.Wrap(err)
 	}
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
 		return claims, nil
 	}
 
-	return nil, ErrInvalidToken
+	return nil, domain.ErrInvalidToken
 }

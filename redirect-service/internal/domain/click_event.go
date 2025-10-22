@@ -6,6 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type ClickMetadata struct {
+	ClientIP  string
+	UserAgent string
+	Referrer  string
+}
+
 type ClickEvent struct {
 	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	ShortCode      string             `bson:"shortCode" json:"shortCode"`

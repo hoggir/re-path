@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/hoggir/re-path/redirect-service/internal/database"
@@ -11,12 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-var (
-	ErrURLNotFound = errors.New("url not found")
-	ErrURLExpired  = errors.New("url has expired")
-	ErrURLInactive = errors.New("url is inactive")
 )
 
 type URLRepository interface {
@@ -46,17 +38,24 @@ func (r *urlRepository) FindByShortCode(ctx context.Context, shortCode string) (
 	err := r.collection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"userId": 1, "originalUrl": 1, "isActive": 1, "expiresAt": 1, "_id": 0})).Decode(&url)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, ErrURLNotFound
+			return nil, domain.ErrURLNotFound.WithContext("shortCode", shortCode)
 		}
-		return nil, fmt.Errorf("failed to find url: %w", err)
+		return nil, domain.ErrDatabaseError.
+			WithContext("shortCode", shortCode).
+			WithContext("operation", "FindByShortCode").
+			Wrap(err)
 	}
 
 	if !url.IsActive {
-		return nil, ErrURLInactive
+		return nil, domain.ErrURLInactive.
+			WithContext("shortCode", shortCode).
+			WithContext("userId", url.UserID)
 	}
 
 	if url.ExpiresAt != nil && url.ExpiresAt.Before(time.Now()) {
-		return nil, ErrURLExpired
+		return nil, domain.ErrURLExpired.
+			WithContext("shortCode", shortCode).
+			WithContext("expiresAt", url.ExpiresAt)
 	}
 
 	return &url, nil
@@ -78,11 +77,14 @@ func (r *urlRepository) IncrementClickCount(ctx context.Context, shortCode strin
 
 	result, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return fmt.Errorf("failed to increment click count: %w", err)
+		return domain.ErrDatabaseError.
+			WithContext("shortCode", shortCode).
+			WithContext("operation", "IncrementClickCount").
+			Wrap(err)
 	}
 
 	if result.MatchedCount == 0 {
-		return ErrURLNotFound
+		return domain.ErrURLNotFound.WithContext("shortCode", shortCode)
 	}
 
 	return nil

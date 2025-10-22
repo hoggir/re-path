@@ -10,6 +10,7 @@ import (
 	"github.com/hoggir/re-path/redirect-service/internal/config"
 	"github.com/hoggir/re-path/redirect-service/internal/database"
 	"github.com/hoggir/re-path/redirect-service/internal/handler"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"github.com/hoggir/re-path/redirect-service/internal/repository"
 	"github.com/hoggir/re-path/redirect-service/internal/server"
 	"github.com/hoggir/re-path/redirect-service/internal/service"
@@ -19,28 +20,30 @@ import (
 
 func InitializeApp() (*server.Server, error) {
 	configConfig := config.Load()
-	mongoDB, err := database.NewMongoDB(configConfig)
+	loggerLogger := logger.NewLogger(configConfig)
+	mongoDB, err := database.NewMongoDB(configConfig, loggerLogger)
 	if err != nil {
 		return nil, err
 	}
 	urlRepository := repository.NewURLRepository(mongoDB)
-	redis, err := database.NewRedis(configConfig)
+	redis, err := database.NewRedis(configConfig, loggerLogger)
 	if err != nil {
 		return nil, err
 	}
-	cacheService := service.NewCacheService(redis, configConfig)
-	redirectService := service.NewRedirectService(urlRepository, cacheService, configConfig)
+	cacheService := service.NewCacheService(redis, configConfig, loggerLogger)
+	cacheKeyGenerator := service.NewCacheKeyGenerator(configConfig)
+	redirectService := service.NewRedirectService(urlRepository, cacheService, cacheKeyGenerator, configConfig, loggerLogger)
 	clickEventRepository := repository.NewClickEventRepository(mongoDB)
-	geoIPService := service.NewGeoIPService(cacheService, configConfig)
-	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, redirectService)
-	rabbitMQ, err := database.NewRabbitMQ(configConfig)
+	geoIPService := service.NewGeoIPService(cacheService, cacheKeyGenerator, configConfig, loggerLogger)
+	clickEventService := service.NewClickEventService(clickEventRepository, geoIPService, redirectService, loggerLogger)
+	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService, configConfig, loggerLogger)
+	healthHandler := handler.NewHealthHandler()
+	rabbitMQ, err := database.NewRabbitMQ(configConfig, loggerLogger)
 	if err != nil {
 		return nil, err
 	}
-	rabbitMQRPCService := service.NewRabbitMQRPCService(rabbitMQ)
-	dashboardService := service.NewDashboardService(rabbitMQRPCService, cacheService, configConfig)
-	redirectHandler := handler.NewRedirectHandler(redirectService, clickEventService, dashboardService)
-	healthHandler := handler.NewHealthHandler()
+	rabbitMQRPCService := service.NewRabbitMQRPCService(rabbitMQ, loggerLogger)
+	dashboardService := service.NewDashboardService(rabbitMQRPCService, cacheService, cacheKeyGenerator, configConfig, loggerLogger)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	handlers := server.NewHandlers(redirectHandler, healthHandler, dashboardHandler)
 	jwtService := service.NewJWTService(configConfig)

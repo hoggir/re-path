@@ -8,6 +8,7 @@ import (
 	"github.com/hoggir/re-path/redirect-service/internal/config"
 	"github.com/hoggir/re-path/redirect-service/internal/database"
 	"github.com/hoggir/re-path/redirect-service/internal/handler"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"github.com/hoggir/re-path/redirect-service/internal/repository"
 	"github.com/hoggir/re-path/redirect-service/internal/server"
 	"github.com/hoggir/re-path/redirect-service/internal/service"
@@ -16,6 +17,7 @@ import (
 func InitializeApp() (*server.Server, error) {
 	wire.Build(
 		config.Load,
+		logger.NewLogger,
 
 		database.NewMongoDB,
 		database.NewRedis,
@@ -24,6 +26,7 @@ func InitializeApp() (*server.Server, error) {
 		repository.NewURLRepository,
 		repository.NewClickEventRepository,
 
+		service.NewCacheKeyGenerator,
 		service.NewCacheService,
 		service.NewGeoIPService,
 		service.NewRabbitMQRPCService,

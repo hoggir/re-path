@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/hoggir/re-path/redirect-service/internal/config"
 	"github.com/hoggir/re-path/redirect-service/internal/domain"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 )
 
 type GeoIPService interface {
@@ -19,26 +18,32 @@ type GeoIPService interface {
 
 func NewGeoIPService(
 	cacheService CacheService,
+	cacheKeys *CacheKeyGenerator,
 	cfg *config.Config,
+	log logger.Logger,
 ) GeoIPService {
 	return &geoIPService{
 		client: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: cfg.Service.GeoIPTimeout,
 		},
 		cacheService: cacheService,
+		cacheKeys:    cacheKeys,
 		config:       cfg,
+		logger:       log,
 	}
 }
 
 type geoIPService struct {
 	client       *http.Client
 	cacheService CacheService
+	cacheKeys    *CacheKeyGenerator
 	config       *config.Config
+	logger       logger.Logger
 }
 
 func (s *geoIPService) GetLocation(ctx context.Context, ip string) (*domain.GeoLocation, error) {
 	if isLocalOrPrivateIP(ip) {
-		log.Printf("🏠 IP %s is localhost or private, returning default location", ip)
+		s.logger.DebugContext(ctx, "IP is localhost or private, returning default location", "ip", ip)
 		return &domain.GeoLocation{
 			Country:     "Local",
 			CountryCode: "XX",
@@ -46,7 +51,7 @@ func (s *geoIPService) GetLocation(ctx context.Context, ip string) (*domain.GeoL
 		}, nil
 	}
 
-	cacheKey := fmt.Sprintf("geoip:%s", ip)
+	cacheKey := s.cacheKeys.GeoIP(ip)
 	var location domain.GeoLocation
 	err := s.cacheService.Get(ctx, cacheKey, &location)
 	if err == nil {
@@ -54,7 +59,7 @@ func (s *geoIPService) GetLocation(ctx context.Context, ip string) (*domain.GeoL
 		return &location, nil
 	}
 
-	reqCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	reqCtx, cancel := context.WithTimeout(ctx, s.config.Service.GeoIPTimeout)
 	defer cancel()
 
 	url := fmt.Sprintf("http://ip-api.com/json/%s?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query", ip)
@@ -122,7 +127,7 @@ func (s *geoIPService) GetLocation(ctx context.Context, ip string) (*domain.GeoL
 	}
 
 	if err := s.cacheService.Set(ctx, cacheKey, geoLocation, s.config.Redis.CacheTTL); err != nil {
-		log.Printf("⚠️  Failed to cache location for IP %s: %v", ip, err)
+		s.logger.WarnContext(ctx, "failed to cache location for IP", "ip", ip, "error", err)
 	}
 
 	return geoLocation, nil

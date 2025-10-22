@@ -1,9 +1,8 @@
 package database
 
 import (
-	"log"
-
 	"github.com/hoggir/re-path/redirect-service/internal/config"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -11,19 +10,20 @@ type RabbitMQ struct {
 	Connection *amqp.Connection
 	Channel    *amqp.Channel
 	Config     *config.Config
+	logger     logger.Logger
 }
 
-func NewRabbitMQ(cfg *config.Config) (*RabbitMQ, error) {
-	log.Printf("🔌 Connecting to RabbitMQ: %s", maskPassword(cfg.RabbitMQ.URL))
+func NewRabbitMQ(cfg *config.Config, log logger.Logger) (*RabbitMQ, error) {
+	log.Info("connecting to RabbitMQ", "url", maskPassword(cfg.RabbitMQ.URL))
 	conn, err := amqp.Dial(cfg.RabbitMQ.URL)
 	if err != nil {
-		log.Printf("❌ Failed to connect to RabbitMQ: %v", err)
+		log.Error("failed to connect to RabbitMQ", "error", err)
 		return nil, err
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Printf("❌ Failed to create channel: %v", err)
+		log.Error("failed to create channel", "error", err)
 		conn.Close()
 		return nil, err
 	}
@@ -34,21 +34,22 @@ func NewRabbitMQ(cfg *config.Config) (*RabbitMQ, error) {
 	}
 
 	for _, queueName := range queues {
-		log.Printf("📋 Declaring queue: %s", queueName)
+		log.Info("declaring queue", "queue", queueName)
 		_, err := ch.QueueDeclare(queueName, true, false, false, false, nil)
 		if err != nil {
-			log.Printf("❌ Failed to declare queue %s: %v", queueName, err)
+			log.Error("failed to declare queue", "queue", queueName, "error", err)
 			ch.Close()
 			conn.Close()
 			return nil, err
 		}
 	}
 
-	log.Printf("✅ RabbitMQ connected successfully")
+	log.Info("RabbitMQ connected successfully")
 	return &RabbitMQ{
 		Connection: conn,
 		Channel:    ch,
 		Config:     cfg,
+		logger:     log,
 	}, nil
 }
 
@@ -58,21 +59,21 @@ func maskPassword(url string) string {
 }
 
 func (r *RabbitMQ) Close() error {
-	log.Println("🔌 Closing RabbitMQ connection...")
+	r.logger.Info("closing RabbitMQ connection")
 
 	if r.Channel != nil {
 		if err := r.Channel.Close(); err != nil {
-			log.Printf("⚠️  Failed to close channel: %v", err)
+			r.logger.Warn("failed to close channel", "error", err)
 		}
 	}
 
 	if r.Connection != nil {
 		if err := r.Connection.Close(); err != nil {
-			log.Printf("⚠️  Failed to close connection: %v", err)
+			r.logger.Warn("failed to close connection", "error", err)
 			return err
 		}
 	}
 
-	log.Println("✅ RabbitMQ connection closed successfully")
+	r.logger.Info("RabbitMQ connection closed successfully")
 	return nil
 }

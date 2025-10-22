@@ -39,7 +39,7 @@ func main() {
 	}
 	defer func() {
 		log.Println("🧹 Cleaning up resources...")
-		if err := srv.MongoDB.Close(); err != nil {
+		if err := srv.MongoDB.Close(srv.Config); err != nil {
 			log.Printf("Error closing MongoDB: %v", err)
 		}
 		if err := srv.Redis.Close(); err != nil {

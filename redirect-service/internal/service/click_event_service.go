@@ -4,67 +4,66 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hoggir/re-path/redirect-service/internal/domain"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 	"github.com/hoggir/re-path/redirect-service/internal/repository"
 	"github.com/mileusna/useragent"
 )
 
 type ClickEventService interface {
-	TrackClick(ctx context.Context, ginCtx *gin.Context, shortCode string) error
+	TrackClick(ctx context.Context, metadata domain.ClickMetadata, shortCode string) error
 }
 
 type clickEventService struct {
 	clickEventRepo  repository.ClickEventRepository
 	geoIPService    GeoIPService
 	redirectService RedirectService
+	logger          logger.Logger
 }
 
 func NewClickEventService(
 	clickEventRepo repository.ClickEventRepository,
 	geoIPService GeoIPService,
 	redirectService RedirectService,
+	log logger.Logger,
 ) ClickEventService {
 	return &clickEventService{
 		clickEventRepo:  clickEventRepo,
 		geoIPService:    geoIPService,
 		redirectService: redirectService,
+		logger:          log,
 	}
 }
 
-func (s *clickEventService) TrackClick(ctx context.Context, ginCtx *gin.Context, shortCode string) error {
+func (s *clickEventService) TrackClick(ctx context.Context, metadata domain.ClickMetadata, shortCode string) error {
 	newDate := time.Now().UTC()
-	ua := useragent.Parse(ginCtx.Request.UserAgent())
-	clientIP := ginCtx.ClientIP()
-	log.Printf("📍 Tracking click from IP: %s", clientIP)
+	ua := useragent.Parse(metadata.UserAgent)
+	s.logger.DebugContext(ctx, "tracking click", "ip", metadata.ClientIP, "shortCode", shortCode)
 
 	if err := s.redirectService.IncrementClickCount(ctx, shortCode); err != nil {
-		log.Printf("⚠️  Failed to increment click count for shortCode %s: %v", shortCode, err)
+		s.logger.WarnContext(ctx, "failed to increment click count", "shortCode", shortCode, "error", err)
 	}
 
-	ipHash := hashIPAddress(clientIP)
+	ipHash := hashIPAddress(metadata.ClientIP)
 
 	deviceType := getDeviceType(ua)
 
-	referrer := ginCtx.Request.Referer()
-	referrerDomain := extractDomain(referrer)
+	referrerDomain := extractDomain(metadata.Referrer)
 
-	geoLocation, err := s.geoIPService.GetLocation(ctx, clientIP)
-	// geoLocation, err := s.geoIPService.GetLocation(ctx, "203.175.11.126")
+	geoLocation, err := s.geoIPService.GetLocation(ctx, metadata.ClientIP)
 	if err != nil {
-		log.Printf("⚠️  Failed to get geolocation for IP %s: %v", clientIP, err)
+		s.logger.WarnContext(ctx, "failed to get geolocation", "ip", metadata.ClientIP, "error", err)
 	}
 
 	clickEvent := &domain.ClickEvent{
 		ClickedAt:      newDate,
 		ShortCode:      shortCode,
 		IPAddressHash:  ipHash,
-		UserAgent:      ginCtx.Request.UserAgent(),
-		ReferrerURL:    referrer,
+		UserAgent:      metadata.UserAgent,
+		ReferrerURL:    metadata.Referrer,
 		ReferrerDomain: referrerDomain,
 		DeviceType:     deviceType,
 		BrowserName:    ua.Name,
@@ -82,8 +81,8 @@ func (s *clickEventService) TrackClick(ctx context.Context, ginCtx *gin.Context,
 		clickEvent.Lon = geoLocation.Lon
 	}
 
-	if err := s.clickEventRepo.Create(context.Background(), clickEvent); err != nil {
-		log.Printf("⚠️  Failed to track click event for shortCode %s: %v", shortCode, err)
+	if err := s.clickEventRepo.Create(ctx, clickEvent); err != nil {
+		s.logger.WarnContext(ctx, "failed to track click event", "shortCode", shortCode, "error", err)
 		return nil
 	}
 

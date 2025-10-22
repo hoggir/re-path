@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/hoggir/re-path/redirect-service/internal/config"
 	"github.com/hoggir/re-path/redirect-service/internal/domain"
+	"github.com/hoggir/re-path/redirect-service/internal/logger"
 )
 
 type DashboardService interface {
@@ -18,25 +17,40 @@ type DashboardService interface {
 type dashboardService struct {
 	rpcService   RabbitMQRPCService
 	cacheService CacheService
+	cacheKeys    *CacheKeyGenerator
 	config       *config.Config
+	logger       logger.Logger
 }
 
-func NewDashboardService(rpcService RabbitMQRPCService, cacheService CacheService, cfg *config.Config) DashboardService {
+func NewDashboardService(rpcService RabbitMQRPCService, cacheService CacheService, cacheKeys *CacheKeyGenerator, cfg *config.Config, log logger.Logger) DashboardService {
 	return &dashboardService{
 		rpcService:   rpcService,
 		cacheService: cacheService,
+		cacheKeys:    cacheKeys,
 		config:       cfg,
+		logger:       log,
 	}
 }
 
 func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domain.DashboardResponse, error) {
-	cacheKey := fmt.Sprintf("dashboard:%d", userId)
+	cacheKey := s.cacheKeys.Dashboard(userId)
+	invalidFlagKey := s.cacheKeys.DashboardInvalidationFlag(userId)
 
-	var cachedResponse domain.DashboardResponse
-	if err := s.cacheService.Get(ctx, cacheKey, &cachedResponse); err == nil {
-		log.Printf("⚡ Cache HIT for dashboard: %d", userId)
-		s.cacheService.RefreshTTL(ctx, cacheKey, s.config.Redis.CacheTTL)
-		return &cachedResponse, nil
+	invalidFlagExists, err := s.cacheService.Exists(ctx, invalidFlagKey)
+	if err != nil {
+		s.logger.WarnContext(ctx, "failed to check invalidation flag", "userId", userId, "error", err)
+	}
+
+	if !invalidFlagExists {
+		var cachedResponse domain.DashboardResponse
+		if err := s.cacheService.Get(ctx, cacheKey, &cachedResponse); err == nil {
+			s.logger.DebugContext(ctx, "cache hit for dashboard", "userId", userId)
+			s.cacheService.RefreshTTL(ctx, cacheKey, s.config.Redis.CacheTTL)
+			return &cachedResponse, nil
+		}
+	} else {
+		s.logger.DebugContext(ctx, "dashboard invalidation flag found, refreshing from RPC", "userId", userId)
+		s.cacheService.Delete(ctx, invalidFlagKey)
 	}
 
 	request := domain.DashboardRequest{
@@ -51,7 +65,7 @@ func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domai
 		ctx,
 		s.config.RabbitMQ.Queues.DashboardRequest,
 		request,
-		5*time.Second,
+		s.config.RabbitMQ.RPCTimeout,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dashboard data: %w", err)
@@ -67,7 +81,7 @@ func (s *dashboardService) GetDashboard(ctx context.Context, userId int) (*domai
 	}
 
 	if err := s.cacheService.Set(ctx, cacheKey, result, s.config.Redis.CacheTTL); err != nil {
-		log.Printf("⚠️  Failed to cache dashboard: %d: %v", userId, err)
+		s.logger.WarnContext(ctx, "failed to cache dashboard", "userId", userId, "error", err)
 	}
 
 	return &result, nil
